@@ -1024,16 +1024,20 @@ async function loadArchivedList() {
   const listEl   = document.getElementById('restore-list');
   const btn      = document.getElementById('btn-restore');
 
-  listWrap.style.display = 'none';
-  emptyEl.classList.add('hidden');
-  btn.disabled = true;
-  if (!from || !to || from > to) return;
+  // Validate date range only when both are provided
+  if (from && to && from > to) {
+    listWrap.style.display = 'none';
+    emptyEl.classList.add('hidden');
+    btn.disabled = true;
+    return;
+  }
 
   listEl.innerHTML = '<div style="color:var(--text-muted);padding:8px 0">Loading…</div>';
   listWrap.style.display = '';
 
   try {
-    const jobs = await api(`/api/jobs/archived-list?from=${from}&to=${to}`);
+    const params = from && to ? `?from=${from}&to=${to}` : '';
+    const jobs = await api(`/api/jobs/archived-list${params}`);
     if (jobs.length === 0) {
       listWrap.style.display = 'none';
       emptyEl.classList.remove('hidden');
