@@ -78,10 +78,10 @@ router.get('/', (req, res) => {
   res.json(listJobs(db, req.query));
 });
 
+// from/to are optional; omit to get all non-archived jobs
 router.get('/active-list', (req, res) => {
   const { from, to } = req.query;
-  if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
-  res.json(listActiveJobsInRange(db, from, to));
+  res.json(listActiveJobsInRange(db, from || null, to || null));
 });
 
 router.get('/export-csv', (req, res) => {
@@ -170,7 +170,7 @@ router.post('/', (req, res) => {
 
 router.patch('/:id/status', (req, res) => {
   const { status } = req.body;
-  if (!['active', 'voided'].includes(status)) {
+  if (!['active', 'billable', 'voided', 'archived'].includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
   updateJobStatus(db, req.params.id, status);

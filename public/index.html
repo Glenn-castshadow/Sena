@@ -51,9 +51,12 @@
             <option value="">All Users</option>
           </select>
           <input type="text" id="job-search" placeholder="Search jobs, descriptions, notes…" oninput="loadJobs()">
-          <label class="toggle-label">
-            <input type="checkbox" id="job-show-voided" onchange="loadJobs()"> Show voided
-          </label>
+          <div class="status-chips" id="job-status-chips">
+            <button class="chip chip-active active" data-status="active" onclick="toggleStatusChip(this)">● Active</button>
+            <button class="chip chip-billable active" data-status="billable" onclick="toggleStatusChip(this)">● Ready to Bill</button>
+            <button class="chip chip-voided" data-status="voided" onclick="toggleStatusChip(this)">● Voided</button>
+            <button class="chip chip-archived" data-status="archived" onclick="toggleStatusChip(this)">● Archived</button>
+          </div>
         </div>
         <div class="table-wrap">
           <table id="jobs-table">
@@ -65,7 +68,7 @@
                 <th>Folder</th>
                 <th>Created</th>
                 <th>Status</th>
-                <th class="editor-only">Actions</th>
+                <th class="editor-only">Details</th>
               </tr>
             </thead>
             <tbody id="jobs-tbody"></tbody>

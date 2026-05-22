@@ -265,6 +265,54 @@ tbody tr.voided .isci-code { text-decoration: line-through; }
 .isci-copyable:hover { color: var(--accent); border-color: var(--accent); }
 .isci-copied { color: var(--green) !important; border-color: var(--green) !important; }
 
+/* STATUS FILTER CHIPS */
+.status-chips { display: flex; gap: 6px; flex-wrap: nowrap; }
+
+.chip {
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+  background: none;
+}
+.chip.active { opacity: 1; }
+.chip-active  { color: var(--green);  border-color: var(--green);  }
+.chip-billable{ color: var(--yellow); border-color: var(--yellow); }
+.chip-voided  { color: var(--text-muted); border-color: var(--text-muted); }
+.chip-archived{ color: var(--red);    border-color: var(--red);    }
+.chip:hover   { opacity: 0.8; }
+.chip.active:hover { opacity: 0.85; }
+
+/* 3-STATE STATUS CYCLE BUTTON */
+.status-cycle-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid currentColor;
+  cursor: pointer;
+  background: none;
+  white-space: nowrap;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.status-cycle-btn:hover { opacity: 0.75; transform: scale(1.04); }
+.status-cycle-btn.status-active   { color: var(--green); }
+.status-cycle-btn.status-billable { color: var(--yellow); }
+.status-cycle-btn.status-voided   { color: var(--text-muted); }
+.status-cycle-btn.status-archived { color: var(--red); }
+
+/* Row tinting by status */
+tr.job-status-billable td { background: rgba(245,158,11,0.04); }
+tr.job-status-voided td   { opacity: 0.5; }
+tr.job-status-archived td { opacity: 0.4; }
+
 /* STATUS BADGES */
 .badge {
   display: inline-block;

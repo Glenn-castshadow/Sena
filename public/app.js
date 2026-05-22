@@ -476,18 +476,29 @@ async function toggleClient(id, active) {
 }
 
 // ── Jobs ───────────────────────────────────────────────────────────────────
+function getActiveStatusChips() {
+  return [...document.querySelectorAll('.chip[data-status].active')]
+    .map(c => c.dataset.status);
+}
+
+function toggleStatusChip(btn) {
+  btn.classList.toggle('active');
+  loadJobs();
+}
+
 async function loadJobs() {
-  const search = document.getElementById('job-search').value.trim();
-  const groupId = document.getElementById('job-filter-group')?.value || '';
+  const search   = document.getElementById('job-search').value.trim();
+  const groupId  = document.getElementById('job-filter-group')?.value || '';
   const clientId = document.getElementById('job-filter-client').value;
-  const showVoided = document.getElementById('job-show-voided').checked;
   const creatorId = document.getElementById('job-filter-creator')?.value || '';
+  const activeChips = getActiveStatusChips();
+
   const params = new URLSearchParams();
   if (search) params.set('search', search);
   if (groupId) params.set('group_id', groupId);
   else if (clientId) params.set('client_id', clientId);
   if (creatorId) params.set('created_by_id', creatorId);
-  if (!showVoided) params.set('status', 'active');
+  if (activeChips.length > 0) params.set('status', activeChips.join(','));
 
   const jobs = await api('/api/jobs?' + params);
   jobCache = {};
@@ -496,11 +507,11 @@ async function loadJobs() {
   const hasRoot = settings.jobs_root?.trim();
   const editable = canEdit();
 
-  tbody.innerHTML = jobs.map(j => {
-    const voided = j.status === 'voided';
+  const STATUS_LABEL = { active: '● Active', billable: '● Ready to Bill', voided: '● Voided', archived: '● Archived' };
+  const STATUS_CYCLE = { active: 'billable', billable: 'archived', archived: 'active', voided: 'active' };
 
+  tbody.innerHTML = jobs.map(j => {
     let folderCell;
-    // Folder name = job_number (serial+code+slug). Path is stored internally.
     const folderName = escHtml(j.job_number);
     const pathTip = j.folder_path ? escHtml(j.folder_path) : '';
 
@@ -511,7 +522,6 @@ async function loadJobs() {
           ${editable ? `<button class="btn btn-sm btn-ghost folder-btn" id="folder-btn-${j.id}" onclick="pickAndCreateFolder(${j.id})" title="Recreate — pick location and rebuild folder">↺</button>` : ''}
         </div>`;
     } else {
-      // Show what the folder name will be, with a create button
       folderCell = editable
         ? `<div class="folder-pending">
              <span class="folder-name-preview" title="Will be created as: ${folderName}">${folderName}</span>
@@ -520,17 +530,20 @@ async function loadJobs() {
         : `<span class="folder-name-preview">${folderName}</span>`;
     }
 
+    const statusBtn = editable
+      ? `<button class="status-cycle-btn status-${j.status}" onclick="cycleJobStatus(${j.id},'${j.status}')" title="Click to advance status">${STATUS_LABEL[j.status] || j.status}</button>`
+      : `<span class="badge badge-${j.status}">${STATUS_LABEL[j.status] || j.status}</span>`;
+
     return `
-    <tr class="${voided ? 'voided' : ''}" id="job-row-${j.id}">
+    <tr class="job-status-${j.status}" id="job-row-${j.id}">
       <td><span class="job-number" title="${escHtml(j.job_number)}">${j.serial}${escHtml(j.client_code)}</span></td>
       <td>${escHtml(j.client_name)}</td>
       <td>${escHtml(j.description)}</td>
       <td class="folder-cell">${folderCell}</td>
       <td>${fmtDate(j.created_at)}</td>
-      <td><span class="badge badge-${j.status}">${j.status}</span></td>
+      <td>${statusBtn}</td>
       ${editable ? `<td class="actions">
         <button class="btn btn-sm btn-ghost" onclick="openJobDetails(${j.id})">Details</button>
-        <button class="btn btn-sm btn-ghost" onclick="toggleJobStatus(${j.id},'${j.status}')">${voided ? 'Unvoid' : 'Void'}</button>
       </td>` : ''}
     </tr>`;
   }).join('') || `<tr class="empty-row"><td colspan="${editable ? 7 : 6}">No jobs found.</td></tr>`;
@@ -551,8 +564,13 @@ async function submitNewJob(e) {
   } catch(err) { alert('Error: ' + err.message); }
 }
 
-async function toggleJobStatus(id, current) {
-  await api(`/api/jobs/${id}/status`, { method: 'PATCH', body: { status: current === 'active' ? 'voided' : 'active' } });
+async function cycleJobStatus(id, current) {
+  const cycle = { active: 'billable', billable: 'archived', archived: 'active', voided: 'active' };
+  const next = cycle[current] || 'active';
+  if (next === 'archived') {
+    if (!confirm('Mark this job as Archived? It will be hidden from the main list.\nYou can restore it from Archive → Restore.')) return;
+  }
+  await api(`/api/jobs/${id}/status`, { method: 'PATCH', body: { status: next } });
   await loadJobs();
 }
 
@@ -948,6 +966,7 @@ function switchArchiveTab(tab) {
   document.getElementById('tab-restore').classList.toggle('active', tab === 'restore');
   // Auto-load all archived jobs when opening restore tab
   if (tab === 'restore') loadArchivedList();
+  if (tab === 'archive') loadActiveList();
 }
 async function loadActiveList() {
   const from = document.getElementById('archive-from').value;
@@ -960,13 +979,14 @@ async function loadActiveList() {
   emptyEl.classList.add('hidden');
   document.getElementById('btn-export-csv').disabled = true;
   document.getElementById('btn-archive').disabled = true;
-  if (!from || !to || from > to) return;
+  if (from && to && from > to) return;  // invalid range only — allow empty dates
 
   listEl.innerHTML = '<div style="color:var(--text-muted);padding:8px 0">Loading…</div>';
   listWrap.style.display = '';
 
   try {
-    const jobs = await api(`/api/jobs/active-list?from=${from}&to=${to}`);
+    const qs = from && to ? `?from=${from}&to=${to}` : '';
+    const jobs = await api(`/api/jobs/active-list${qs}`);
     if (jobs.length === 0) {
       listWrap.style.display = 'none';
       emptyEl.classList.remove('hidden');
