@@ -508,7 +508,6 @@ async function loadJobs() {
   const editable = canEdit();
 
   const STATUS_LABEL = { active: '● Active', billable: '● Ready to Bill', voided: '● Voided', archived: '● Archived' };
-  const STATUS_CYCLE = { active: 'billable', billable: 'archived', archived: 'active', voided: 'active' };
 
   tbody.innerHTML = jobs.map(j => {
     let folderCell;

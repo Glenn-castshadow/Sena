@@ -10,15 +10,21 @@ const { BASE_PATH, port, sessionSecret } = require('./config');
 const SQLiteStore = require('./session-store');
 const { requireAuth, requireAdmin, requireEditor } = require('./middleware/auth');
 
-// Injects window.BASE_PATH into HTML before sending
+// Injects window.BASE_PATH and a cache-busting version into HTML before sending
+const BUILD_TS = Date.now(); // changes on every server restart, busts JS/CSS cache
+
 function serveHtml(file) {
   return (req, res) => {
-    const html = fs.readFileSync(path.join(__dirname, 'public', file), 'utf8');
-    const injected = html.replace(
+    let html = fs.readFileSync(path.join(__dirname, 'public', file), 'utf8');
+    // Inject config
+    html = html.replace(
       '</head>',
       `<script>window.BASE_PATH=${JSON.stringify(BASE_PATH)};</script></head>`
     );
-    res.type('html').send(injected);
+    // Append cache-buster to local JS/CSS references
+    html = html.replace(/(src|href)="(app\.js|style\.css|login\.css)"/g,
+      `$1="$2?v=${BUILD_TS}"`);
+    res.type('html').send(html);
   };
 }
 
