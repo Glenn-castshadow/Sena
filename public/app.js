@@ -76,13 +76,23 @@ async function populateCreatorFilters() {
 }
 
 // ── Resizable columns ──────────────────────────────────────────────────────
+// Default column widths per table (px). Set by user preference.
+const COL_DEFAULTS = {
+  'jobs-table':  [136, 156, 231, 293, 123, 101, 153],
+};
+
 function initResizableCols(tableEl) {
   if (!tableEl || tableEl.dataset.resizable) return;
   tableEl.dataset.resizable = '1';
 
   const ths = [...tableEl.querySelectorAll('thead th')];
-  // Lock natural widths so table-layout:fixed respects them
-  ths.forEach(th => { th.style.width = th.offsetWidth + 'px'; });
+  const defaults = COL_DEFAULTS[tableEl.id];
+
+  ths.forEach((th, i) => {
+    // Use saved defaults if available, otherwise lock the natural width
+    th.style.width = (defaults && defaults[i] ? defaults[i] : th.offsetWidth) + 'px';
+  });
+
   tableEl.style.tableLayout = 'fixed';
   // Let table be only as wide as its columns — no centering or stretching
   tableEl.style.width = 'auto';
