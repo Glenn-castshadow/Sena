@@ -657,7 +657,7 @@ async function loadIsci() {
       <td>${escHtml(c.client_name)}</td>
       <td><span class="badge badge-${c.media_type}">${c.media_type === 'H' ? 'HD Video' : 'Radio'}</span></td>
       <td>${escHtml(c.description || '-')}</td>
-      <td>${c.job_number ? `<code>${escHtml(c.job_number)}</code>` : '—'}</td>
+      <td>${c.job_number ? `<code>${escHtml(c.job_number)}</code>` : '-'}</td>
       <td>${fmtDate(c.created_at)}</td>
       <td><span class="badge badge-${c.status}">${c.status}</span></td>
       ${editable ? `<td class="actions">
