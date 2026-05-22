@@ -605,16 +605,25 @@ function slugify(str) {
     .replace(/^_|_$/g, '');
 }
 
+function getRootCode(clientId) {
+  // Walk up the parent chain in the cached clients array to find root code
+  let c = clients.find(x => x.id === Number(clientId));
+  while (c && c.parent_id) {
+    c = clients.find(x => x.id === c.parent_id);
+  }
+  return c ? c.code : null;
+}
+
 function updateJobPreview() {
   const clientEl = document.getElementById('nj-client');
   const desc = document.getElementById('nj-description').value.trim();
   const preview = document.getElementById('nj-preview');
   if (!clientEl.value || !desc) { preview.textContent = '—'; return; }
-  const client = clients.find(c => String(c.id) === clientEl.value);
-  if (!client) return;
+  const rootCode = getRootCode(clientEl.value) || clients.find(c => String(c.id) === clientEl.value)?.code;
+  if (!rootCode) return;
   const serial = settings.next_job_serial || '?';
   const slug = slugify(desc);
-  preview.textContent = `${serial}${client.code}${slug ? '_' + slug : ''}`;
+  preview.textContent = `${serial}${rootCode}${slug ? '_' + slug : ''}`;
 }
 
 document.getElementById('nj-client').addEventListener('change', updateJobPreview);

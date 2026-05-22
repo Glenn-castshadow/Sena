@@ -13,6 +13,7 @@ const {
   bumpSerial,
   getArchiveRange,
   getClientById,
+  getRootClientCode,
   getIsciExportRows,
   getJobById,
   getJobDetails,
@@ -138,7 +139,10 @@ router.post('/', (req, res) => {
   if (!client) return res.status(400).json({ error: 'Client not found' });
 
   const serial = getNextSerial(db);
-  const jobNumber = makeJobFolderName(serial, client.code, description);
+  // Use the top-level ancestor's code for the job number
+  // e.g. Future Kia of Clovis → Future Auto Group → Sena Advertising → 'SENA'
+  const billingCode = getRootClientCode(db, client_id) || client.code;
+  const jobNumber = makeJobFolderName(serial, billingCode, description);
   const jobsRoot = getSetting(db, 'jobs_root') || '';
   let folderPath = '';
   let folderCreated = 0;
