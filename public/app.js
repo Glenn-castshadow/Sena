@@ -507,7 +507,7 @@ async function loadJobs() {
   const hasRoot = settings.jobs_root?.trim();
   const editable = canEdit();
 
-  const STATUS_LABEL = { active: '● Active', billable: '● Ready to Bill', voided: '● Voided', archived: '● Archived' };
+  const STATUS_LABEL = { active: '● Active', billable: '● Ready to Bill', invoiced: '● Invoiced', voided: '● Voided', archived: '● Archived' };
 
   tbody.innerHTML = jobs.map(j => {
     let folderCell;
@@ -564,10 +564,10 @@ async function submitNewJob(e) {
 }
 
 async function cycleJobStatus(id, current) {
-  // Toggle between Active and Ready to Bill only.
-  // Archiving is done deliberately via the Archive modal.
-  const toggle = { active: 'billable', billable: 'active', voided: 'active', archived: 'active' };
-  const next = toggle[current] || 'active';
+  // Forward cycle: Active → Ready to Bill → Invoiced → Active
+  // Archiving is deliberate via the Archive modal only.
+  const cycle = { active: 'billable', billable: 'invoiced', invoiced: 'active', voided: 'active', archived: 'active' };
+  const next = cycle[current] || 'active';
   await api(`/api/jobs/${id}/status`, { method: 'PATCH', body: { status: next } });
   await loadJobs();
 }
@@ -866,6 +866,7 @@ async function toggleVoidFromDetails() {
   if (!notesTarget || notesTarget.type !== 'job') return;
   const j = jobCache[notesTarget.id];
   if (!j) return;
+  // Void goes back to active; unvoid also goes to active regardless of prior state
   const next = j.status === 'voided' ? 'active' : 'voided';
   const label = next === 'voided' ? 'void' : 'restore';
   if (!confirm(`Mark this job as ${next === 'voided' ? 'Voided' : 'Active'}?`)) return;

@@ -10,6 +10,7 @@
   --text: #e8eaf0;
   --text-muted: #7a8099;
   --text-dim: #4a5068;
+  --blue: #3b82f6;
   --green: #22c55e;
   --red: #ef4444;
   --yellow: #f59e0b;
@@ -281,10 +282,11 @@ tbody tr.voided .isci-code { text-decoration: line-through; }
   background: none;
 }
 .chip.active { opacity: 1; }
-.chip-active  { color: var(--green);  border-color: var(--green);  }
-.chip-billable{ color: var(--yellow); border-color: var(--yellow); }
-.chip-voided  { color: var(--text-muted); border-color: var(--text-muted); }
-.chip-archived{ color: var(--red);    border-color: var(--red);    }
+.chip-active   { color: var(--blue);       border-color: var(--blue);       }
+.chip-billable { color: var(--yellow);     border-color: var(--yellow);     }
+.chip-invoiced { color: var(--green);      border-color: var(--green);      }
+.chip-voided   { color: var(--text-muted); border-color: var(--text-muted); }
+.chip-archived { color: var(--red);        border-color: var(--red);        }
 .chip:hover   { opacity: 0.8; }
 .chip.active:hover { opacity: 0.85; }
 
@@ -303,15 +305,17 @@ tbody tr.voided .isci-code { text-decoration: line-through; }
   transition: opacity 0.15s, transform 0.1s;
 }
 .status-cycle-btn:hover { opacity: 0.75; transform: scale(1.04); }
-.status-cycle-btn.status-active   { color: var(--green); }
+.status-cycle-btn.status-active   { color: var(--blue); }
 .status-cycle-btn.status-billable { color: var(--yellow); }
+.status-cycle-btn.status-invoiced { color: var(--green); }
 .status-cycle-btn.status-voided   { color: var(--text-muted); }
 .status-cycle-btn.status-archived { color: var(--red); }
 
 /* Row tinting by status */
-tr.job-status-billable td { background: rgba(245,158,11,0.04); }
-tr.job-status-voided td   { opacity: 0.5; }
-tr.job-status-archived td { opacity: 0.4; }
+tr.job-status-billable td  { background: rgba(245,158,11,0.04); }
+tr.job-status-invoiced td  { background: rgba(34,197,94,0.04); }
+tr.job-status-voided td    { opacity: 0.5; }
+tr.job-status-archived td  { opacity: 0.4; }
 
 /* STATUS BADGES */
 .badge {
@@ -323,8 +327,10 @@ tr.job-status-archived td { opacity: 0.4; }
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.badge-active { background: rgba(34,197,94,0.15); color: var(--green); }
-.badge-voided { background: rgba(239,68,68,0.12); color: var(--red); }
+.badge-active   { background: rgba(59,130,246,0.15); color: var(--blue); }
+.badge-billable { background: rgba(245,158,11,0.15); color: var(--yellow); }
+.badge-invoiced { background: rgba(34,197,94,0.15);  color: var(--green); }
+.badge-voided   { background: rgba(239,68,68,0.12);  color: var(--red); }
 .badge-H { background: rgba(59,130,246,0.15); color: #60a5fa; }
 .badge-R { background: rgba(168,85,247,0.15); color: #c084fc; }
 

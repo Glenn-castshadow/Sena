@@ -174,7 +174,7 @@ router.post('/', (req, res) => {
 
 router.patch('/:id/status', (req, res) => {
   const { status } = req.body;
-  if (!['active', 'billable', 'voided', 'archived'].includes(status)) {
+  if (!['active', 'billable', 'invoiced', 'voided', 'archived'].includes(status)) {
     return res.status(400).json({ error: 'Invalid status' });
   }
   updateJobStatus(db, req.params.id, status);
