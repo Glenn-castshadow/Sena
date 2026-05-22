@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sena Advertising — Job Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-sa">SA</span>
+        <div>
+          <div class="logo-title">Sena Advertising</div>
+          <div class="logo-sub">Job Tracker</div>
+        </div>
+      </div>
+      <ul class="nav-links">
+        <li><a href="#" data-page="jobs" class="active">Jobs</a></li>
+        <li><a href="#" data-page="isci">ISCI Codes</a></li>
+        <li><a href="#" data-page="clients">Clients</a></li>
+        <li id="nav-users-li" style="display:none"><a href="#" data-page="users">Users</a></li>
+        <li><a href="#" data-page="settings">Settings</a></li>
+      </ul>
+      <div class="sidebar-footer">
+        <span id="nav-username" class="nav-username"></span>
+        <span id="nav-role-badge" class="nav-role-badge"></span>
+        <button class="btn-logout" onclick="logout()">Sign Out</button>
+      </div>
+    </nav>
+
+    <main class="content">
+      <!-- JOBS PAGE -->
+      <section id="page-jobs" class="page active">
+        <div class="page-header">
+          <h1>Jobs</h1>
+          <button id="btn-new-job" class="btn btn-primary editor-only" onclick="openModal('modal-new-job')">+ New Job</button>
+        </div>
+        <div class="toolbar">
+          <input type="text" id="job-search" placeholder="Search jobs, descriptions, notes…" oninput="loadJobs()">
+          <select id="job-filter-group" onchange="onGroupFilterChange()">
+            <option value="">All Groups</option>
+          </select>
+          <select id="job-filter-client" onchange="loadJobs()">
+            <option value="">All Clients</option>
+          </select>
+          <select id="job-filter-creator" onchange="loadJobs()" style="display:none">
+            <option value="">All Users</option>
+          </select>
+          <label class="toggle-label">
+            <input type="checkbox" id="job-show-voided" onchange="loadJobs()"> Show voided
+          </label>
+        </div>
+        <div class="table-wrap">
+          <table id="jobs-table">
+            <thead>
+              <tr>
+                <th>Job Number</th>
+                <th>Client</th>
+                <th>Description</th>
+                <th>Folder</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th class="editor-only">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="jobs-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ISCI PAGE -->
+      <section id="page-isci" class="page">
+        <div class="page-header">
+          <h1>ISCI Codes</h1>
+          <button class="btn btn-primary editor-only" onclick="openModal('modal-new-isci')">+ New ISCI</button>
+        </div>
+        <div class="toolbar">
+          <input type="text" id="isci-search" placeholder="Search ISCI codes, descriptions…" oninput="loadIsci()">
+          <select id="isci-filter-client" onchange="loadIsci()">
+            <option value="">All Clients</option>
+          </select>
+          <select id="isci-filter-type" onchange="loadIsci()">
+            <option value="">All Types</option>
+            <option value="H">HD Video</option>
+            <option value="R">Radio</option>
+          </select>
+          <select id="isci-filter-creator" onchange="loadIsci()" style="display:none">
+            <option value="">All Users</option>
+          </select>
+          <label class="toggle-label">
+            <input type="checkbox" id="isci-show-voided" onchange="loadIsci()"> Show voided
+          </label>
+        </div>
+        <div class="table-wrap">
+          <table id="isci-table">
+            <thead>
+              <tr>
+                <th>ISCI Code</th>
+                <th>Client</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Linked Job</th>
+                <th>Created</th>
+                <th>Status</th>
+                <th class="editor-only">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="isci-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- CLIENTS PAGE -->
+      <section id="page-clients" class="page">
+        <div class="page-header">
+          <h1>Clients</h1>
+          <button class="btn btn-primary editor-only" onclick="openNewClientModal()">+ New Client</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th><th>Code</th><th>ISCI Code</th><th>Group / Parent</th><th>Status</th>
+                <th class="editor-only">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="clients-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- USERS PAGE (admin only) -->
+      <section id="page-users" class="page">
+        <div class="page-header">
+          <h1>Users</h1>
+          <button class="btn btn-primary" onclick="openModal('modal-user')">+ New User</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SETTINGS PAGE -->
+      <section id="page-settings" class="page">
+        <div class="page-header"><h1>Settings</h1></div>
+        <div class="settings-form">
+          <div class="form-group">
+            <label>Jobs Root Folder Path</label>
+            <div class="path-row">
+              <input type="text" id="setting-jobs-root" placeholder="e.g. Z:\Jobs or \\server\Production">
+              <button type="button" class="btn btn-secondary" onclick="pickFolder()" id="btn-pick-folder">Browse…</button>
+            </div>
+            <small id="pick-folder-note">
+              <strong>On this machine:</strong> Browse opens a folder picker.
+              <strong>Remote:</strong> Type the path manually — jobs will be created without folders until you're back on the server.
+            </small>
+          </div>
+          <div class="form-group">
+            <label>Job Template Folder</label>
+            <div class="path-row">
+              <input type="text" id="setting-template-folder" placeholder="e.g. C:\Users\you\Desktop\template_folder">
+              <button type="button" class="btn btn-secondary" onclick="pickTemplateFolder()" id="btn-pick-template">Browse…</button>
+            </div>
+            <small>Folder whose subfolder structure is copied into every new job. Leave blank to use the default structure.</small>
+          </div>
+          <div class="form-group">
+            <label>Agency ISCI Prefix</label>
+            <input type="text" id="setting-agency-code" placeholder="SA" maxlength="4">
+            <small>Two-letter prefix prepended to all ISCI codes (default: SA)</small>
+          </div>
+          <div class="form-group">
+            <label>Next Job Serial Number</label>
+            <input type="number" id="setting-next-serial" min="1">
+            <small>The serial number that will be assigned to the next new job</small>
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+          <span id="settings-saved" class="save-indicator"></span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: New Job -->
+  <div id="modal-new-job" class="modal-backdrop" onclick="closeModalBackdrop(event,'modal-new-job')">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>New Job</h2>
+        <button class="modal-close" onclick="closeModal('modal-new-job')">✕</button>
+      </div>
+      <form id="form-new-job" onsubmit="submitNewJob(event)">
+        <div class="form-group">
+          <label>Client <span class="req">*</span></label>
+          <select id="nj-client" required></select>
+        </div>
+        <div class="form-group">
+          <label>Description <span class="req">*</span></label>
+          <input type="text" id="nj-description" placeholder="Memorial_Day_Campaign" required>
+          <small>Spaces will become underscores in the job number</small>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="nj-notes" rows="3" placeholder="Optional notes…"></textarea>
+        </div>
+        <div class="form-group preview-group">
+          <label>Job Number Preview</label>
+          <div id="nj-preview" class="code-preview">—</div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-new-job')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Job</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: New ISCI -->
+  <div id="modal-new-isci" class="modal-backdrop" onclick="closeModalBackdrop(event,'modal-new-isci')">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>New ISCI Code</h2>
+        <button class="modal-close" onclick="closeModal('modal-new-isci')">✕</button>
+      </div>
+      <form id="form-new-isci" onsubmit="submitNewIsci(event)">
+        <div class="form-group">
+          <label>Client <span class="req">*</span></label>
+          <select id="ni-client" required onchange="updateIsciPreview()"></select>
+        </div>
+        <div class="form-group">
+          <label>Media Type <span class="req">*</span></label>
+          <select id="ni-type" required onchange="updateIsciPreview()">
+            <option value="H">HD Video (H)</option>
+            <option value="R">Radio (R)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Linked Job (optional)</label>
+          <select id="ni-job">
+            <option value="">— None —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" id="ni-description" placeholder="Memorial Day :30 spot">
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="ni-notes" rows="2"></textarea>
+        </div>
+        <div class="form-group preview-group">
+          <label>ISCI Code Preview</label>
+          <div id="ni-preview" class="code-preview">—</div>
+          <small id="ni-preview-note"></small>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-new-isci')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Generate ISCI</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: New / Edit Client -->
+  <div id="modal-new-client" class="modal-backdrop" onclick="closeModalBackdrop(event,'modal-new-client')">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="nc-title">New Client</h2>
+        <button class="modal-close" onclick="closeModal('modal-new-client')">✕</button>
+      </div>
+      <form id="form-new-client" onsubmit="submitNewClient(event)">
+        <input type="hidden" id="nc-edit-id">
+        <div class="form-group">
+          <label>Parent Group <small style="font-weight:400;text-transform:none">(optional)</small></label>
+          <select id="nc-parent">
+            <option value="">— Top level / no parent —</option>
+          </select>
+          <small>e.g. select "Future Auto Group" for a Future dealership</small>
+        </div>
+        <div class="form-group">
+          <label>Client Name <span class="req">*</span></label>
+          <input type="text" id="nc-name" required placeholder="Future Kia Clovis">
+        </div>
+        <div class="form-group">
+          <label>Job Code <span class="req">*</span></label>
+          <input type="text" id="nc-code" required placeholder="FKC" maxlength="10">
+          <small>Used in job numbers (e.g. 22170SENA_FKC_Description)</small>
+        </div>
+        <div class="form-group">
+          <label>ISCI Code <span class="req">*</span></label>
+          <input type="text" id="nc-isci" required placeholder="FKC" maxlength="6">
+          <small>Used in ISCI codes (e.g. SAFKC26001H)</small>
+        </div>
+        <div id="nc-active-group" style="display:none" class="form-group">
+          <label>Status</label>
+          <label class="toggle-label" style="margin-top:6px">
+            <input type="checkbox" id="nc-active" checked> Active
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-new-client')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="nc-submit">Add Client</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: New/Edit User -->
+  <div id="modal-user" class="modal-backdrop" onclick="closeModalBackdrop(event,'modal-user')">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-user-title">New User</h2>
+        <button class="modal-close" onclick="closeModal('modal-user')">✕</button>
+      </div>
+      <form id="form-user" onsubmit="submitUser(event)">
+        <input type="hidden" id="user-edit-id">
+        <div class="form-group">
+          <label>Username <span class="req">*</span></label>
+          <input type="text" id="user-username" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Role <span class="req">*</span></label>
+          <select id="user-role" required>
+            <option value="editor">Editor — can create and edit</option>
+            <option value="viewer">Viewer — read only</option>
+            <option value="admin">Admin — full access + manage users</option>
+          </select>
+        </div>
+        <div class="form-group" id="user-active-group" style="display:none">
+          <label>Status</label>
+          <label class="toggle-label" style="margin-top:6px">
+            <input type="checkbox" id="user-active" checked> Active
+          </label>
+        </div>
+        <div class="form-group" id="user-password-group">
+          <label id="user-pw-label">Password <span class="req">*</span></label>
+          <div class="pw-row">
+            <input type="text" id="user-password" autocomplete="new-password" placeholder="Min 8 characters">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="generatePassword()">Generate</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-copy-pw" onclick="copyPassword()" title="Copy password">Copy</button>
+          </div>
+          <small id="user-pw-hint">Leave blank to keep existing password</small>
+        </div>
+        <div id="user-form-error" class="form-error hidden"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-user')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="user-submit-btn">Create User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Details / Notes -->
+  <div id="modal-notes" class="modal-backdrop" onclick="closeModalBackdrop(event,'modal-notes')">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-notes-title">Details</h2>
+        <button class="modal-close" onclick="closeModal('modal-notes')">✕</button>
+      </div>
+      <div id="modal-notes-meta" class="detail-meta"></div>
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="notes-textarea" rows="5" style="width:100%"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-notes')">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveNotes()">Save Notes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

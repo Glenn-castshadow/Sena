@@ -1,0 +1,12 @@
+# This file goes in your senaadvertising.com public_html root (or wherever Apache serves the domain).
+# It proxies /jobtrack/* to the Node.js app running on port 3000.
+# Requires mod_proxy and mod_proxy_http to be enabled on the server.
+
+<IfModule mod_proxy.c>
+  ProxyRequests Off
+  ProxyPreserveHost On
+
+  # Proxy /jobtrack and everything under it to Node.js
+  ProxyPass /jobtrack http://127.0.0.1:3000
+  ProxyPassReverse /jobtrack http://127.0.0.1:3000
+</IfModule>

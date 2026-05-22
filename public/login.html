@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sena Advertising — Sign In</title>
+  <link rel="stylesheet" href="login.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-logo">
+        <span class="logo-sa">SA</span>
+        <div>
+          <div class="logo-title">Sena Advertising</div>
+          <div class="logo-sub">Job Tracker</div>
+        </div>
+      </div>
+
+      <!-- Setup form (shown only on first run) -->
+      <form id="setup-form" class="auth-form hidden" onsubmit="submitSetup(event)">
+        <h2>Create Admin Account</h2>
+        <p class="form-hint">No accounts exist yet. Set up your admin login to get started.</p>
+        <div class="field">
+          <label>Username</label>
+          <input type="text" id="setup-username" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label>Password <span class="hint">(min 8 characters)</span></label>
+          <input type="password" id="setup-password" autocomplete="new-password" required minlength="8">
+        </div>
+        <div class="field">
+          <label>Confirm Password</label>
+          <input type="password" id="setup-confirm" autocomplete="new-password" required minlength="8">
+        </div>
+        <div id="setup-error" class="error-msg hidden"></div>
+        <button type="submit" class="btn-login">Create Account & Sign In</button>
+      </form>
+
+      <!-- Normal login form -->
+      <form id="login-form" class="auth-form hidden" onsubmit="submitLogin(event)">
+        <h2>Sign In</h2>
+        <div class="field">
+          <label>Username</label>
+          <input type="text" id="login-username" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="login-password" autocomplete="current-password" required>
+        </div>
+        <div id="login-error" class="error-msg hidden"></div>
+        <button type="submit" class="btn-login">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const BASE = window.BASE_PATH || '';
+
+    async function init() {
+      const res = await fetch(BASE + '/auth/setup-needed');
+      const { needed } = await res.json();
+      if (needed) {
+        document.getElementById('setup-form').classList.remove('hidden');
+      } else {
+        document.getElementById('login-form').classList.remove('hidden');
+      }
+    }
+
+    async function submitLogin(e) {
+      e.preventDefault();
+      const errEl = document.getElementById('login-error');
+      errEl.classList.add('hidden');
+      const username = document.getElementById('login-username').value;
+      const password = document.getElementById('login-password').value;
+      const res = await fetch(BASE + '/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        window.location.href = BASE + '/';
+      } else {
+        errEl.textContent = data.error;
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    async function submitSetup(e) {
+      e.preventDefault();
+      const errEl = document.getElementById('setup-error');
+      errEl.classList.add('hidden');
+      const username = document.getElementById('setup-username').value.trim();
+      const password = document.getElementById('setup-password').value;
+      const confirm = document.getElementById('setup-confirm').value;
+      if (password !== confirm) {
+        errEl.textContent = 'Passwords do not match';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      const res = await fetch(BASE + '/auth/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        // Auto-login after setup
+        await fetch(BASE + '/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        window.location.href = BASE + '/';
+      } else {
+        errEl.textContent = data.error;
+        errEl.classList.remove('hidden');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
