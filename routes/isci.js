@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
+const { getDescendantClientIds } = require('../lib/jobs-repository');
 
 function getNextIsciSerial(client_id, year, media_type) {
   const row = db.prepare(
@@ -53,7 +54,13 @@ router.get('/', (req, res) => {
 
   if (status === 'active') { sql += ' AND i.status = ?'; params.push('active'); }
   else if (status === 'voided') { sql += ' AND i.status = ?'; params.push('voided'); }
-  if (client_id) { sql += ' AND i.client_id = ?'; params.push(client_id); }
+  if (client_id) {
+    // Include ISCIs for the selected client AND all its descendants
+    const ids = getDescendantClientIds(db, client_id);
+    const ph = ids.map(() => '?').join(', ');
+    sql += ` AND i.client_id IN (${ph})`;
+    params.push(...ids);
+  }
   if (job_id) { sql += ' AND i.job_id = ?'; params.push(job_id); }
   if (created_by_id) { sql += ' AND i.created_by_id = ?'; params.push(created_by_id); }
   if (search) {
