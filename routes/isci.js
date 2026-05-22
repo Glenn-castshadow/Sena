@@ -107,9 +107,25 @@ router.patch('/:id/status', (req, res) => {
 });
 
 router.patch('/:id', (req, res) => {
-  const { description, notes, job_id } = req.body;
-  db.prepare('UPDATE isci_codes SET description=?, notes=?, job_id=? WHERE id=?')
-    .run(description || null, notes || null, job_id || null, req.params.id);
+  const { description, notes, job_id, media_type } = req.body;
+  if (media_type && !['H', 'R', 'D'].includes(media_type)) {
+    return res.status(400).json({ error: 'media_type must be H, R, or D' });
+  }
+  const current = db.prepare('SELECT * FROM isci_codes WHERE id = ?').get(req.params.id);
+  if (!current) return res.status(404).json({ error: 'Not found' });
+
+  // Rebuild the ISCI code if media_type changes (last character of code)
+  let newCode = current.code;
+  const newType = media_type || current.media_type;
+  if (media_type && media_type !== current.media_type) {
+    newCode = current.code.slice(0, -1) + media_type;
+  }
+
+  db.prepare('UPDATE isci_codes SET description=?, notes=?, job_id=?, media_type=?, code=? WHERE id=?')
+    .run(description ?? current.description, notes ?? current.notes,
+         job_id !== undefined ? (job_id || null) : current.job_id,
+         newType, newCode, req.params.id);
+
   res.json(db.prepare(`
     SELECT i.*, c.name as client_name, j.job_number
     FROM isci_codes i JOIN clients c ON i.client_id = c.id

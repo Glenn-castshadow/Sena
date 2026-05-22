@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sena Advertising — Job Tracker</title>
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
   <div id="app">
@@ -378,6 +378,14 @@
         <button class="modal-close" onclick="closeModal('modal-notes')">✕</button>
       </div>
       <div id="modal-notes-meta" class="detail-meta"></div>
+      <div class="form-group" id="detail-media-type-group" style="display:none">
+        <label>Media Type</label>
+        <select id="detail-media-type">
+          <option value="H">HD Video (H)</option>
+          <option value="R">Radio (R)</option>
+          <option value="D">Digital (D)</option>
+        </select>
+      </div>
       <div class="form-group">
         <label>Notes</label>
         <textarea id="notes-textarea" rows="5" style="width:100%"></textarea>
@@ -385,7 +393,7 @@
       <div class="modal-actions">
         <button type="button" class="btn btn-secondary" onclick="closeModal('modal-notes')">Cancel</button>
         <button type="button" class="btn btn-ghost" id="btn-void-toggle" style="display:none" onclick="toggleVoidFromDetails()"></button>
-        <button type="button" class="btn btn-primary" onclick="saveNotes()">Save Notes</button>
+        <button type="button" class="btn btn-primary" onclick="saveNotes()">Save</button>
       </div>
     </div>
   </div>
@@ -468,6 +476,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

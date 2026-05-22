@@ -905,6 +905,7 @@ function openIsciDetails(id) {
     created_by: c.created_by_username || null,
     created_at: c.created_at,
     sub: c.client_name,
+    media_type: c.media_type,
   });
 }
 
@@ -938,6 +939,18 @@ function openNotesModal(type, id, current, meta = {}) {
     }
   }
 
+  // Show media type selector for ISCIs
+  const mediaGroup = document.getElementById('detail-media-type-group');
+  const mediaSelect = document.getElementById('detail-media-type');
+  if (mediaGroup && mediaSelect) {
+    if (type === 'isci' && canEdit() && meta.media_type) {
+      mediaSelect.value = meta.media_type;
+      mediaGroup.style.display = '';
+    } else {
+      mediaGroup.style.display = 'none';
+    }
+  }
+
   openModal('modal-notes');
 }
 
@@ -949,11 +962,12 @@ async function saveNotes() {
       await api(`/api/jobs/${notesTarget.id}/notes`, { method: 'PATCH', body: { notes } });
       await loadJobs();
     } else {
-      await api(`/api/isci/${notesTarget.id}`, { method: 'PATCH', body: { notes } });
+      const media_type = document.getElementById('detail-media-type')?.value || undefined;
+      await api(`/api/isci/${notesTarget.id}`, { method: 'PATCH', body: { notes, media_type } });
       await loadIsci();
     }
     closeModal('modal-notes');
-  } catch(err) { alert('Error saving notes: ' + err.message); }
+  } catch(err) { alert('Error saving: ' + err.message); }
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────
