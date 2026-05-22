@@ -81,11 +81,16 @@ function initResizableCols(tableEl) {
   tableEl.dataset.resizable = '1';
 
   const ths = [...tableEl.querySelectorAll('thead th')];
-  // Capture natural widths then lock them so table-layout:fixed respects them
+  // Lock natural widths so table-layout:fixed respects them
   ths.forEach(th => { th.style.width = th.offsetWidth + 'px'; });
   tableEl.style.tableLayout = 'fixed';
+  // Let table be only as wide as its columns — no centering or stretching
+  tableEl.style.width = 'auto';
 
-  ths.forEach(th => {
+  ths.forEach((th, i) => {
+    // No handle on the last column — nothing to resize into
+    if (i === ths.length - 1) return;
+
     const handle = document.createElement('div');
     handle.className = 'col-resize-handle';
     th.appendChild(handle);
