@@ -266,7 +266,7 @@ function populateClientDropdownsHierarchy() {
     if (!el) return;
     const isParentPicker = sel === '#nc-parent';
     const prev = el.value;
-    el.innerHTML = isParentPicker ? '<option value="">â€” Top level / no parent â€”</option>' : '';
+    el.innerHTML = isParentPicker ? '<option value=””>-- Top level / no parent --</option>' : '';
 
     activeTree.forEach(({ client: c, depth }) => {
       const indent = '&nbsp;&nbsp;'.repeat(depth) + (depth > 0 ? '↳ ' : '');
@@ -382,7 +382,7 @@ async function loadClients() {
       <td>${nameCell}</td>
       <td><code>${escHtml(c.code)}</code></td>
       <td><code>${escHtml(c.isci_code)}</code></td>
-      <td>${c.parent_name ? `<span class="group-tag">${escHtml(c.parent_name)}</span>` : '<span class="text-dim">â€”</span>'}</td>
+      <td>${c.parent_name ? `<span class=”group-tag”>${escHtml(c.parent_name)}</span>` : '<span class=”text-dim”>-</span>'}</td>
       <td><span class="badge ${c.active ? 'badge-active' : 'badge-voided'}">${c.active ? 'Active' : 'Inactive'}</span></td>
       ${editable ? `<td class="actions">
         <button class="btn btn-sm btn-ghost" onclick="openEditClient(${c.id})">Edit</button>
