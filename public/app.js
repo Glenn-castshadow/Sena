@@ -159,8 +159,46 @@ function closeModalBackdrop(e, id) {
 // ── Clients ────────────────────────────────────────────────────────────────
 async function fetchClients() {
   clients = await api('/api/clients');
-  populateClientDropdowns();
-  populateGroupFilters();
+  populateClientDropdownsHierarchyV2();
+  populateGroupFiltersHierarchyV2();
+}
+
+function buildClientChildrenMap(activeOnly = false) {
+  const map = new Map();
+  clients
+    .filter(c => !activeOnly || c.active)
+    .forEach(c => {
+      const key = c.parent_id || 0;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(c);
+    });
+
+  for (const children of map.values()) {
+    children.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  return map;
+}
+
+function hierarchyIndentSafe(depth, useHtml = false) {
+  if (depth <= 0) return '';
+  const spacer = useHtml ? '&nbsp;&nbsp;' : '\u00A0\u00A0';
+  return `${spacer.repeat(depth)}|- `;
+}
+
+function flattenClientTree(childrenMap, parentId = 0, depth = 0, rows = []) {
+  const children = childrenMap.get(parentId) || [];
+  children.forEach(child => {
+    rows.push({ client: child, depth });
+    flattenClientTree(childrenMap, child.id, depth + 1, rows);
+  });
+  return rows;
+}
+
+function hierarchyIndent(depth, useHtml = false) {
+  if (depth <= 0) return '';
+  const spacer = useHtml ? '&nbsp;&nbsp;' : '\u00A0\u00A0';
+  return `${spacer.repeat(depth)}â†³ `;
 }
 
 function populateClientDropdowns() {
@@ -220,6 +258,108 @@ function populateGroupFilters() {
   if (prev) sel.value = prev;
 }
 
+function populateClientDropdownsHierarchy() {
+  const activeTree = flattenClientTree(buildClientChildrenMap(true));
+
+  ['#nj-client','#ni-client','#nc-parent'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    const isParentPicker = sel === '#nc-parent';
+    const prev = el.value;
+    el.innerHTML = isParentPicker ? '<option value="">â€” Top level / no parent â€”</option>' : '';
+
+    activeTree.forEach(({ client: c, depth }) => {
+      const indent = '&nbsp;&nbsp;'.repeat(depth) + (depth > 0 ? '↳ ' : '');
+      if (!isParentPicker) {
+        el.innerHTML += `<option value="${c.id}">${indent}${escHtml(c.name)} (${escHtml(c.code)})</option>`;
+      } else {
+        el.innerHTML += `<option value="${c.id}">${indent}${escHtml(c.name)}</option>`;
+      }
+    });
+
+    if (prev) el.value = prev;
+  });
+
+  ['#job-filter-client','#isci-filter-client'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    const prev = el.value;
+    el.innerHTML = '<option value="">All Clients</option>';
+    activeTree.forEach(({ client: c, depth }) => {
+      const indent = '\u00A0\u00A0'.repeat(depth) + (depth > 0 ? '↳ ' : '');
+      el.innerHTML += `<option value="${c.id}">${indent}${escHtml(c.name)}</option>`;
+    });
+    if (prev) el.value = prev;
+  });
+}
+
+function populateGroupFiltersHierarchy() {
+  const groups = flattenClientTree(buildClientChildrenMap(true))
+    .filter(({ client }) => clients.some(ch => ch.parent_id === client.id));
+  const sel = document.getElementById('job-filter-group');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">All Groups</option>';
+  groups.forEach(({ client: g, depth }) => {
+    const indent = '\u00A0\u00A0'.repeat(depth) + (depth > 0 ? '↳ ' : '');
+    sel.innerHTML += `<option value="${g.id}">${indent}${escHtml(g.name)}</option>`;
+  });
+  if (prev) sel.value = prev;
+}
+
+function getClientHierarchyRows() {
+  return flattenClientTree(buildClientChildrenMap(false));
+}
+
+function populateClientDropdownsHierarchyV2() {
+  const activeTree = flattenClientTree(buildClientChildrenMap(true));
+
+  ['#nj-client','#ni-client','#nc-parent'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    const isParentPicker = sel === '#nc-parent';
+    const prev = el.value;
+    el.innerHTML = isParentPicker ? '<option value="">- Top level / no parent -</option>' : '';
+
+    activeTree.forEach(({ client: c, depth }) => {
+      const indent = '&nbsp;&nbsp;'.repeat(depth) + (depth > 0 ? '|- ' : '');
+      if (!isParentPicker) {
+        el.innerHTML += `<option value="${c.id}">${indent}${escHtml(c.name)} (${escHtml(c.code)})</option>`;
+      } else {
+        el.innerHTML += `<option value="${c.id}">${indent}${escHtml(c.name)}</option>`;
+      }
+    });
+
+    if (prev) el.value = prev;
+  });
+
+  ['#job-filter-client','#isci-filter-client'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if (!el) return;
+    const prev = el.value;
+    el.innerHTML = '<option value="">All Clients</option>';
+    activeTree.forEach(({ client: c, depth }) => {
+      const indent = '\u00A0\u00A0'.repeat(depth) + (depth > 0 ? '|- ' : '');
+      el.innerHTML += `<option value="${c.id}">${indent}${escHtml(c.name)}</option>`;
+    });
+    if (prev) el.value = prev;
+  });
+}
+
+function populateGroupFiltersHierarchyV2() {
+  const groups = flattenClientTree(buildClientChildrenMap(true))
+    .filter(({ client }) => clients.some(ch => ch.parent_id === client.id));
+  const sel = document.getElementById('job-filter-group');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">All Groups</option>';
+  groups.forEach(({ client: g, depth }) => {
+    const indent = '\u00A0\u00A0'.repeat(depth) + (depth > 0 ? '|- ' : '');
+    sel.innerHTML += `<option value="${g.id}">${indent}${escHtml(g.name)}</option>`;
+  });
+  if (prev) sel.value = prev;
+}
+
 function onGroupFilterChange() {
   // When a group is selected, clear the individual client filter
   const groupId = document.getElementById('job-filter-group').value;
@@ -231,6 +371,26 @@ async function loadClients() {
   await fetchClients();
   const tbody = document.getElementById('clients-tbody');
   const editable = canEdit();
+  const hierarchyRows = getClientHierarchyRows();
+
+  tbody.innerHTML = hierarchyRows.map(({ client: c, depth }) => {
+    const nameCell = depth > 0
+      ? `<span class="client-child-indent">${'&nbsp;&nbsp;'.repeat(depth)}|-</span> ${escHtml(c.name)}`
+      : `<strong>${escHtml(c.name)}</strong>`;
+    return `
+    <tr class="${c.active ? '' : 'voided'}">
+      <td>${nameCell}</td>
+      <td><code>${escHtml(c.code)}</code></td>
+      <td><code>${escHtml(c.isci_code)}</code></td>
+      <td>${c.parent_name ? `<span class="group-tag">${escHtml(c.parent_name)}</span>` : '<span class="text-dim">â€”</span>'}</td>
+      <td><span class="badge ${c.active ? 'badge-active' : 'badge-voided'}">${c.active ? 'Active' : 'Inactive'}</span></td>
+      ${editable ? `<td class="actions">
+        <button class="btn btn-sm btn-ghost" onclick="openEditClient(${c.id})">Edit</button>
+        <button class="btn btn-sm btn-ghost" onclick="toggleClient(${c.id},${c.active})">${c.active ? 'Deactivate' : 'Activate'}</button>
+      </td>` : ''}
+    </tr>`;
+  }).join('') || `<tr class="empty-row"><td colspan="${editable ? 6 : 5}">No clients yet.</td></tr>`;
+  return;
 
   // Sort: top-level first, then children under their parent
   const topLevel = clients.filter(c => !c.parent_id);
@@ -786,6 +946,8 @@ function switchArchiveTab(tab) {
   document.getElementById('restore-panel').style.display  = tab === 'restore' ? '' : 'none';
   document.getElementById('tab-archive').classList.toggle('active', tab === 'archive');
   document.getElementById('tab-restore').classList.toggle('active', tab === 'restore');
+  // Auto-load all archived jobs when opening restore tab
+  if (tab === 'restore') loadArchivedList();
 }
 async function loadActiveList() {
   const from = document.getElementById('archive-from').value;

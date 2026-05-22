@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 
 require('./database');
-const { BASE_PATH, sessionSecret } = require('./config');
+const { BASE_PATH, port, sessionSecret } = require('./config');
 const SQLiteStore = require('./session-store');
 const { requireAuth, requireAdmin, requireEditor } = require('./middleware/auth');
 
@@ -73,12 +73,11 @@ function createApp() {
   return app;
 }
 
-const PORT = process.env.PORT || 3000;
 const app = createApp();
 
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Sena Job Tracker running at http://localhost:${PORT}${BASE_PATH || '/'}`);
+  app.listen(port, () => {
+    console.log(`Sena Job Tracker running at http://localhost:${port}${BASE_PATH || '/'}`);
   });
 }
 

@@ -205,3 +205,110 @@ test('job create, archive, restore, and recreate-folder flows work end-to-end', 
   assert.ok(fs.existsSync(createJob.body.folder_path));
   assert.ok(fs.existsSync(path.join(createJob.body.folder_path, 'Audio')));
 });
+
+test('group job filters include nested descendant clients', async () => {
+  const login = await requestJson('/auth/login', {
+    method: 'POST',
+    body: { username: 'admin', password: 'Password123!' },
+  });
+  assert.equal(login.response.status, 200);
+  const adminCookie = getCookie(login.response);
+
+  const parent = await requestJson('/api/clients', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Sunroad Auto', code: 'SUNROAD', isci_code: 'SR' },
+  });
+  assert.equal(parent.response.status, 200);
+
+  const child = await requestJson('/api/clients', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Kearny Mesa Kia', code: 'KMKIA', isci_code: 'KM', parent_id: parent.body.id },
+  });
+  assert.equal(child.response.status, 200);
+
+  const grandchild = await requestJson('/api/clients', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Future EV', code: 'FUTEV', isci_code: 'FE', parent_id: child.body.id },
+  });
+  assert.equal(grandchild.response.status, 200);
+
+  const job = await requestJson('/api/jobs', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: {
+      client_id: grandchild.body.id,
+      description: 'Nested Group Job',
+      notes: '',
+    },
+  });
+  assert.equal(job.response.status, 200);
+
+  const filtered = await requestJson(`/api/jobs?group_id=${parent.body.id}`, {
+    headers: { Cookie: adminCookie },
+  });
+  assert.equal(filtered.response.status, 200);
+  assert.ok(filtered.body.some((row) => row.id === job.body.id));
+});
+
+test('client job filters include descendant clients when a parent client is selected', async () => {
+  const login = await requestJson('/auth/login', {
+    method: 'POST',
+    body: { username: 'admin', password: 'Password123!' },
+  });
+  assert.equal(login.response.status, 200);
+  const adminCookie = getCookie(login.response);
+
+  const parent = await requestJson('/api/clients', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Future Auto Group', code: 'FAG', isci_code: 'FA' },
+  });
+  assert.equal(parent.response.status, 200);
+
+  const childOne = await requestJson('/api/clients', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Future Hyundai', code: 'FHYU', isci_code: 'FH', parent_id: parent.body.id },
+  });
+  assert.equal(childOne.response.status, 200);
+
+  const childTwo = await requestJson('/api/clients', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Future Kia', code: 'FKIA', isci_code: 'FK', parent_id: parent.body.id },
+  });
+  assert.equal(childTwo.response.status, 200);
+
+  const childThree = await requestJson('/api/clients', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Future Ford', code: 'FFRD', isci_code: 'FF', parent_id: parent.body.id },
+  });
+  assert.equal(childThree.response.status, 200);
+
+  const createdJobs = [];
+  for (const client of [childOne.body, childTwo.body, childThree.body]) {
+    const job = await requestJson('/api/jobs', {
+      method: 'POST',
+      headers: { Cookie: adminCookie },
+      body: {
+        client_id: client.id,
+        description: `Job for ${client.name}`,
+        notes: '',
+      },
+    });
+    assert.equal(job.response.status, 200);
+    createdJobs.push(job.body.id);
+  }
+
+  const filtered = await requestJson(`/api/jobs?client_id=${parent.body.id}`, {
+    headers: { Cookie: adminCookie },
+  });
+  assert.equal(filtered.response.status, 200);
+  createdJobs.forEach((jobId) => {
+    assert.ok(filtered.body.some((row) => row.id === jobId));
+  });
+});

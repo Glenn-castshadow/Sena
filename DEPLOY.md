@@ -1,57 +1,76 @@
-# Deploying to Bluehost (senaadvertising.com/jobtrack)
+# Deploying to Bluehost (`senaadvertising.com/jobtrack`)
 
 ## What you need
-- Bluehost VPS or Cloud plan (shared hosting does not support Node.js or mod_proxy)
-- SSH access to the server
-- A domain already pointing to the server
+- Bluehost VPS or Cloud plan. Shared hosting does not support Node.js or `mod_proxy`.
+- SSH access to the server.
+- A domain already pointing to the server.
 
----
+## 1. Upload the app
 
-## 1 — Upload the app
+Upload the entire project folder to your server, for example:
 
-Upload the entire project folder to your server (e.g. via SFTP or Git):
-```
+```text
 /home/youruser/apps/job-tracker/
 ```
-Do NOT upload `node_modules/` or `jobs.db` — those get created on the server.
 
----
+Do not upload `node_modules/` or `jobs.db`.
 
-## 2 — Create the production .env
+## 2. Create the production `.env`
 
-SSH into the server and create `/home/youruser/apps/job-tracker/.env`:
-```
+Create `/home/youruser/apps/job-tracker/.env`:
+
+```dotenv
 SESSION_SECRET=<generate with: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))">
 NODE_ENV=production
 BASE_PATH=/jobtrack
 PORT=3000
 ```
 
----
+Notes:
+- `SESSION_SECRET` is now required in production.
+- Production startup will fail fast if `SESSION_SECRET` is missing or shorter than 32 characters.
+- `BASE_PATH` must start with `/` when set.
 
-## 3 — Install dependencies & start with PM2
+You can copy `.env.example` from this repo as your starting point.
+
+## 3. Install dependencies and validate config
 
 ```bash
 cd /home/youruser/apps/job-tracker
 npm install --omit=dev
+npm run check:config
+```
+
+`npm run check:config` prints the resolved startup settings and exits non-zero if production config is invalid.
+
+## 4. Start with PM2
+
+```bash
+cd /home/youruser/apps/job-tracker
 npm install -g pm2
 pm2 start ecosystem.config.js --env production
 pm2 save
-pm2 startup   # follow the printed command to auto-start on reboot
+pm2 startup
 ```
 
----
+After startup, confirm the app booted cleanly:
 
-## 4 — Configure Apache to proxy /jobtrack
+```bash
+pm2 status
+pm2 logs sena-job-tracker --lines 100
+```
 
-On Bluehost VPS, Apache is the front-end web server. Add a proxy rule so that
-requests to `senaadvertising.com/jobtrack` are forwarded to Node.js on port 3000.
+## 5. Configure Apache to proxy `/jobtrack`
 
-**Option A — .htaccess** (if AllowOverride is on):
-Copy `.htaccess` from this repo into your `public_html/` root.
+Apache should forward `https://senaadvertising.com/jobtrack` to Node on port `3000`.
 
-**Option B — Virtual host config** (preferred on VPS):
-Edit `/etc/apache2/sites-enabled/senaadvertising.com.conf` and add inside the `<VirtualHost>` block:
+Option A: `.htaccess`
+
+Copy `.htaccess` from this repo into your `public_html/` root if `AllowOverride` is enabled.
+
+Option B: virtual host config
+
+Add this inside your Apache `<VirtualHost>` block:
 
 ```apache
 ProxyRequests Off
@@ -61,37 +80,33 @@ ProxyPassReverse /jobtrack http://127.0.0.1:3000
 ```
 
 Then enable modules and restart Apache:
+
 ```bash
 sudo a2enmod proxy proxy_http
 sudo systemctl restart apache2
 ```
 
----
+## 6. First-run account setup
 
-## 5 — First-run account setup
+Visit [https://senaadvertising.com/jobtrack](https://senaadvertising.com/jobtrack).
 
-Visit `https://senaadvertising.com/jobtrack` in a browser.
-The first visit shows the **Create Admin Account** screen — set your username and password.
-This setup screen disappears permanently once an account exists.
-
----
+On first run, the app shows the Create Admin Account screen. Once an account exists, that setup flow is permanently disabled.
 
 ## Updating the app
 
 ```bash
 cd /home/youruser/apps/job-tracker
-git pull          # or re-upload changed files
+git pull
 npm install --omit=dev
+npm run check:config
 pm2 restart sena-job-tracker
 ```
-
----
 
 ## Useful PM2 commands
 
 ```bash
-pm2 status                        # check if app is running
-pm2 logs sena-job-tracker         # live log output
-pm2 restart sena-job-tracker      # restart after code changes
-pm2 stop sena-job-tracker         # stop the app
+pm2 status
+pm2 logs sena-job-tracker
+pm2 restart sena-job-tracker
+pm2 stop sena-job-tracker
 ```
