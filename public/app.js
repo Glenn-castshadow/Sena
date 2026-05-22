@@ -25,7 +25,7 @@ async function api(path, opts = {}) {
 }
 
 function fmtDate(iso) {
-  if (!iso) return '—';
+  if (!iso) return '-';
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
@@ -410,7 +410,7 @@ async function loadClients() {
       <td>${nameCell}</td>
       <td><code>${escHtml(c.code)}</code></td>
       <td><code>${escHtml(c.isci_code)}</code></td>
-      <td>${c.parent_name ? `<span class="group-tag">${escHtml(c.parent_name)}</span>` : '<span class="text-dim">—</span>'}</td>
+      <td>${c.parent_name ? `<span class="group-tag">${escHtml(c.parent_name)}</span>` : '<span class="text-dim">-</span>'}</td>
       <td><span class="badge ${c.active ? 'badge-active' : 'badge-voided'}">${c.active ? 'Active' : 'Inactive'}</span></td>
       ${editable ? `<td class="actions">
         <button class="btn btn-sm btn-ghost" onclick="openEditClient(${c.id})">Edit</button>
@@ -558,7 +558,7 @@ async function submitNewJob(e) {
     }});
     closeModal('modal-new-job');
     document.getElementById('form-new-job').reset();
-    document.getElementById('nj-preview').textContent = '—';
+    document.getElementById('nj-preview').textContent = '-';
     await loadJobs();
   } catch(err) { alert('Error: ' + err.message); }
 }
@@ -618,7 +618,7 @@ function updateJobPreview() {
   const clientEl = document.getElementById('nj-client');
   const desc = document.getElementById('nj-description').value.trim();
   const preview = document.getElementById('nj-preview');
-  if (!clientEl.value || !desc) { preview.textContent = '—'; return; }
+  if (!clientEl.value || !desc) { preview.textContent = '-'; return; }
   const rootCode = getRootCode(clientEl.value) || clients.find(c => String(c.id) === clientEl.value)?.code;
   if (!rootCode) return;
   const serial = settings.next_job_serial || '?';
@@ -656,7 +656,7 @@ async function loadIsci() {
       <td><span class="isci-code isci-copyable" onclick="copyIsci(this,'${escHtml(c.code)}')" title="Click to copy">${escHtml(c.code)}</span></td>
       <td>${escHtml(c.client_name)}</td>
       <td><span class="badge badge-${c.media_type}">${c.media_type === 'H' ? 'HD Video' : 'Radio'}</span></td>
-      <td>${escHtml(c.description || '—')}</td>
+      <td>${escHtml(c.description || '-')}</td>
       <td>${c.job_number ? `<code>${escHtml(c.job_number)}</code>` : '—'}</td>
       <td>${fmtDate(c.created_at)}</td>
       <td><span class="badge badge-${c.status}">${c.status}</span></td>
@@ -680,7 +680,7 @@ async function submitNewIsci(e) {
     }});
     closeModal('modal-new-isci');
     document.getElementById('form-new-isci').reset();
-    document.getElementById('ni-preview').textContent = '—';
+    document.getElementById('ni-preview').textContent = '-';
     await loadIsci();
   } catch(err) { alert('Error: ' + err.message); }
 }
@@ -707,7 +707,7 @@ async function updateIsciPreview() {
   const typeEl = document.getElementById('ni-type');
   const preview = document.getElementById('ni-preview');
   const note = document.getElementById('ni-preview-note');
-  if (!clientEl.value) { preview.textContent = '—'; note.textContent = ''; return; }
+  if (!clientEl.value) { preview.textContent = '-'; note.textContent = ''; return; }
   const client = clients.find(c => String(c.id) === clientEl.value);
   if (!client) return;
   try {
@@ -726,7 +726,7 @@ async function updateIsciPreview() {
       : client.isci_code;
     preview.textContent = `${prefix}${year}${paddedSerial}${typeEl.value}`;
     note.textContent = `Next serial: ${paddedSerial}`;
-  } catch { preview.textContent = '—'; }
+  } catch { preview.textContent = '-'; }
 }
 
 document.getElementById('ni-type').addEventListener('change', updateIsciPreview);
