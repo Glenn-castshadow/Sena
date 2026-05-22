@@ -1,3 +1,5 @@
+const { BASE_PATH } = require('../config');
+
 function requireAuth(req, res, next) {
   if (req.session && req.session.userId) {
     // Reject inactive users on every request
@@ -8,14 +10,14 @@ function requireAuth(req, res, next) {
       if (req.xhr || req.headers.accept?.includes('application/json')) {
         return res.status(401).json({ error: 'Account inactive' });
       }
-      return res.redirect('/login');
+      return res.redirect(`${BASE_PATH}/login`);
     }
     return next();
   }
   if (req.xhr || req.headers.accept?.includes('application/json')) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
-  res.redirect('/login');
+  res.redirect(`${BASE_PATH}/login`);
 }
 
 function requireAdmin(req, res, next) {

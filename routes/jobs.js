@@ -215,20 +215,23 @@ router.post('/archive', (req, res) => {
   res.json({ archived_jobs: ids.length, archived_isci: archivedIsci });
 });
 
-// List archived jobs in a date range for the restore checklist
+// List archived jobs — date range is optional; omit to get all archived
 router.get('/archived-list', (req, res) => {
   const { from, to } = req.query;
-  if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
-  const jobs = db.prepare(`
+  let sql = `
     SELECT j.id, j.job_number, j.serial, j.description, j.created_at,
            c.name as client_name, c.code as client_code,
            (SELECT COUNT(*) FROM isci_codes WHERE job_id = j.id AND status = 'archived') as isci_count
     FROM jobs j JOIN clients c ON j.client_id = c.id
     WHERE j.status = 'archived'
-      AND date(j.created_at) >= date(?) AND date(j.created_at) <= date(?)
-    ORDER BY j.serial ASC
-  `).all(from, to);
-  res.json(jobs);
+  `;
+  const params = [];
+  if (from && to) {
+    sql += ' AND date(j.created_at) >= date(?) AND date(j.created_at) <= date(?)';
+    params.push(from, to);
+  }
+  sql += ' ORDER BY j.serial DESC';
+  res.json(db.prepare(sql).all(...params));
 });
 
 // Restore specific jobs by ID array
@@ -327,7 +330,7 @@ router.post('/:id/recreate-folder', (req, res) => {
 
   try {
     fs.mkdirSync(job.folder_path, { recursive: true });
-    for (const sub of SUBFOLDERS) {
+    for (const sub of getSubfolders()) {
       fs.mkdirSync(path.join(job.folder_path, sub), { recursive: true });
     }
     db.prepare('UPDATE jobs SET folder_created = 1 WHERE id = ?').run(job.id);

@@ -1,10 +1,11 @@
 const { Store } = require('express-session');
 const db = require('./database');
 
-// Purge expired sessions every 15 minutes
-setInterval(() => {
+// Purge expired sessions every 15 minutes without keeping the process alive.
+const cleanupTimer = setInterval(() => {
   db.prepare('DELETE FROM sessions WHERE expires < ?').run(Date.now());
 }, 15 * 60 * 1000);
+cleanupTimer.unref();
 
 class SQLiteStore extends Store {
   get(sid, cb) {

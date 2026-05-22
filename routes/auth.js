@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const db = require('../database');
+const { BASE_PATH } = require('../config');
 
 router.get('/login', (req, res) => {
-  if (req.session.userId) return res.redirect('/');
+  if (req.session.userId) return res.redirect(`${BASE_PATH}/`);
   res.sendFile(require('path').join(__dirname, '../public/login.html'));
 });
 
@@ -15,7 +16,7 @@ router.post('/login', async (req, res) => {
   }
 
   const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username.trim());
-  if (!user) {
+  if (!user || !user.active) {
     return res.status(401).json({ error: 'Invalid username or password' });
   }
 
