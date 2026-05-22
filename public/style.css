@@ -540,6 +540,27 @@ tr.job-status-archived td  { opacity: 0.4; }
   vertical-align: middle;
 }
 
+/* ISCI CODE INPUT */
+.code-input {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--green);
+  text-transform: uppercase;
+}
+.isci-dupe-warning {
+  margin-top: 6px;
+  padding: 7px 12px;
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.4);
+  border-radius: var(--radius);
+  color: var(--yellow);
+  font-size: 13px;
+  font-weight: 600;
+}
+.isci-dupe-warning.hidden { display: none; }
+
 /* PASSWORD ROW */
 .pw-row {
   display: flex;

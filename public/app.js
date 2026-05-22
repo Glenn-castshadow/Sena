@@ -685,6 +685,7 @@ async function loadIsci() {
 
 async function submitNewIsci(e) {
   e.preventDefault();
+  const overrideCode = document.getElementById('ni-code-override')?.value.trim().toUpperCase() || '';
   try {
     await api('/api/isci', { method: 'POST', body: {
       client_id: document.getElementById('ni-client').value,
@@ -692,10 +693,12 @@ async function submitNewIsci(e) {
       job_id: document.getElementById('ni-job').value || null,
       description: document.getElementById('ni-description').value.trim(),
       notes: document.getElementById('ni-notes').value.trim(),
+      code_override: overrideCode || undefined,
     }});
     closeModal('modal-new-isci');
     document.getElementById('form-new-isci').reset();
-    document.getElementById('ni-preview').textContent = '-';
+    if (document.getElementById('ni-code-override')) document.getElementById('ni-code-override').value = '';
+    document.getElementById('ni-duplicate-warning')?.classList.add('hidden');
     await loadIsci();
   } catch(err) { alert('Error: ' + err.message); }
 }
@@ -717,31 +720,55 @@ async function toggleIsciStatus(id, current) {
   await loadIsci();
 }
 
+let _isciDupeTimer = null;
+
 async function updateIsciPreview() {
   const clientEl = document.getElementById('ni-client');
-  const typeEl = document.getElementById('ni-type');
-  const preview = document.getElementById('ni-preview');
-  const note = document.getElementById('ni-preview-note');
-  if (!clientEl.value) { preview.textContent = '-'; note.textContent = ''; return; }
+  const typeEl   = document.getElementById('ni-type');
+  const input    = document.getElementById('ni-code-override');
+  const note     = document.getElementById('ni-preview-note');
+  if (!clientEl.value) {
+    if (input) { input.value = ''; input.placeholder = 'Select a client first'; }
+    note.textContent = '';
+    return;
+  }
   const client = clients.find(c => String(c.id) === clientEl.value);
   if (!client) return;
   try {
     const existing = await api(`/api/isci?client_id=${clientEl.value}`);
     const same = existing.filter(c => c.media_type === typeEl.value);
     const nextSerial = (same.length > 0 ? Math.max(...same.map(c => c.serial)) : 0) + 1;
-    const paddedSerial = String(nextSerial).padStart(3,'0');
+    const paddedSerial = String(nextSerial).padStart(3, '0');
     const year = String(new Date().getFullYear()).slice(-2);
-    // Only prepend agency code if this client traces back to the agency root
     const agencyCode = settings.agency_code || 'SA';
-    // Walk to root; compare root's isci_code (e.g. 'SA') not its job code (e.g. 'SENA')
     let rootClient = clients.find(c => c.id === Number(clientEl.value));
     while (rootClient && rootClient.parent_id) rootClient = clients.find(c => c.id === rootClient.parent_id);
     const prefix = (rootClient && rootClient.isci_code === agencyCode)
-      ? agencyCode + client.isci_code
-      : client.isci_code;
-    preview.textContent = `${prefix}${year}${paddedSerial}${typeEl.value}`;
-    note.textContent = `Next serial: ${paddedSerial}`;
-  } catch { preview.textContent = '-'; }
+      ? agencyCode + client.isci_code : client.isci_code;
+    const generated = `${prefix}${year}${paddedSerial}${typeEl.value}`;
+    if (input) { input.value = generated; }
+    note.textContent = `Auto-generated (serial ${paddedSerial}) — edit to override`;
+    checkIsciDuplicate();
+  } catch {
+    if (input) input.value = '';
+  }
+}
+
+async function checkIsciDuplicate() {
+  const input   = document.getElementById('ni-code-override');
+  const warning = document.getElementById('ni-duplicate-warning');
+  if (!input || !warning) return;
+  const code = input.value.trim().toUpperCase();
+  warning.classList.add('hidden');
+  if (!code || code.length < 4) return;
+  clearTimeout(_isciDupeTimer);
+  _isciDupeTimer = setTimeout(async () => {
+    try {
+      const results = await api(`/api/isci?search=${encodeURIComponent(code)}`);
+      const exact = results.find(i => i.code.toUpperCase() === code);
+      warning.classList.toggle('hidden', !exact);
+    } catch {}
+  }, 350);
 }
 
 document.getElementById('ni-type').addEventListener('change', updateIsciPreview);

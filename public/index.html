@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sena Advertising — Job Tracker</title>
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
   <div id="app">
@@ -269,8 +269,9 @@
           <textarea id="ni-notes" rows="2"></textarea>
         </div>
         <div class="form-group preview-group">
-          <label>ISCI Code Preview</label>
-          <div id="ni-preview" class="code-preview">—</div>
+          <label>ISCI Code <small style="font-weight:400;text-transform:none">(auto-generated — edit to override)</small></label>
+          <input type="text" id="ni-code-override" class="code-input" placeholder="Generating..." oninput="checkIsciDuplicate()" autocomplete="off" spellcheck="false">
+          <div id="ni-duplicate-warning" class="isci-dupe-warning hidden">&#9888; This ISCI code already exists in the system.</div>
           <small id="ni-preview-note"></small>
         </div>
         <div class="modal-actions">
@@ -476,6 +477,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

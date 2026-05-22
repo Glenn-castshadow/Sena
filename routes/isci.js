@@ -73,17 +73,27 @@ router.get('/', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { client_id, job_id, media_type, description, notes, year } = req.body;
+  const { client_id, job_id, media_type, description, notes, year, code_override } = req.body;
   if (!client_id || !media_type) return res.status(400).json({ error: 'client_id and media_type are required' });
   if (!['H', 'R', 'D'].includes(media_type)) return res.status(400).json({ error: 'media_type must be H, R, or D' });
 
   const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(client_id);
   if (!client) return res.status(400).json({ error: 'Client not found' });
 
-  const prefix = getIsciPrefix(client);
   const currentYear = year || String(new Date().getFullYear()).slice(-2);
-  const serial = getNextIsciSerial(client_id, currentYear, media_type);
-  const code = buildCode(prefix, currentYear, serial, media_type);
+
+  let code, serial;
+  if (code_override) {
+    // Use user-supplied code — check it's not already taken
+    const existing = db.prepare('SELECT id FROM isci_codes WHERE code = ?').get(code_override);
+    if (existing) return res.status(400).json({ error: `ISCI code "${code_override}" already exists` });
+    code = code_override;
+    serial = getNextIsciSerial(client_id, currentYear, media_type); // still bump serial counter
+  } else {
+    const prefix = getIsciPrefix(client);
+    serial = getNextIsciSerial(client_id, currentYear, media_type);
+    code = buildCode(prefix, currentYear, serial, media_type);
+  }
 
   const created_by_id = req.session?.userId || null;
   const result = db.prepare(
