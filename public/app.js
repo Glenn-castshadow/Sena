@@ -849,7 +849,20 @@ function openJobDetails(id) {
     created_by: j.created_by_username || null,
     created_at: j.created_at,
     sub: j.client_name,
+    status: j.status,
   });
+}
+
+async function toggleVoidFromDetails() {
+  if (!notesTarget || notesTarget.type !== 'job') return;
+  const j = jobCache[notesTarget.id];
+  if (!j) return;
+  const next = j.status === 'voided' ? 'active' : 'voided';
+  const label = next === 'voided' ? 'void' : 'restore';
+  if (!confirm(`Mark this job as ${next === 'voided' ? 'Voided' : 'Active'}?`)) return;
+  await api(`/api/jobs/${notesTarget.id}/status`, { method: 'PATCH', body: { status: next } });
+  closeModal('modal-notes');
+  await loadJobs();
 }
 
 function openIsciDetails(id) {
@@ -868,16 +881,30 @@ function openNotesModal(type, id, current, meta = {}) {
   notesTarget = { type, id };
   document.getElementById('notes-textarea').value = current;
 
-  const titleEl = document.getElementById('modal-notes-title');
-  const metaEl  = document.getElementById('modal-notes-meta');
+  const titleEl   = document.getElementById('modal-notes-title');
+  const metaEl    = document.getElementById('modal-notes-meta');
+  const voidBtn   = document.getElementById('btn-void-toggle');
 
   titleEl.textContent = meta.label || 'Details';
 
   const metaItems = [];
+  if (meta.status)     metaItems.push(`<span class="detail-item"><strong>Status</strong> ${escHtml(meta.status)}</span>`);
   if (meta.created_by) metaItems.push(`<span class="detail-item"><strong>Created by</strong> ${escHtml(meta.created_by)}</span>`);
   if (meta.created_at) metaItems.push(`<span class="detail-item"><strong>Date</strong> ${fmtDate(meta.created_at)}</span>`);
   if (meta.sub)        metaItems.push(`<span class="detail-item">${escHtml(meta.sub)}</span>`);
   metaEl.innerHTML = metaItems.length ? metaItems.join('') : '';
+
+  // Show Void / Unvoid button for jobs only
+  if (voidBtn) {
+    if (type === 'job' && canEdit()) {
+      const isVoided = meta.status === 'voided';
+      voidBtn.textContent = isVoided ? 'Unvoid' : 'Void';
+      voidBtn.className = `btn ${isVoided ? 'btn-secondary' : 'btn-ghost'}`;
+      voidBtn.style.display = '';
+    } else {
+      voidBtn.style.display = 'none';
+    }
+  }
 
   openModal('modal-notes');
 }
