@@ -422,9 +422,10 @@
         <div class="form-group">
           <label>Date Range</label>
           <div class="date-range-row">
-            <input type="date" id="restore-from" onchange="loadArchivedList()">
+            <input type="date" id="restore-from">
             <span class="date-range-sep">to</span>
-            <input type="date" id="restore-to" onchange="loadArchivedList()">
+            <input type="date" id="restore-to">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="loadArchivedList()">Find</button>
           </div>
         </div>
         <div id="restore-list-wrap" style="display:none">
