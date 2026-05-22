@@ -1,0 +1,18 @@
+services:
+  job-tracker:
+    build: .
+    container_name: sena-job-tracker
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Database lives outside the container so it survives rebuilds
+      - /volume1/docker/job-tracker:/data
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_PATH: /data/jobs.db
+      # Set your real secret here or in a .env file alongside this compose file
+      SESSION_SECRET: change-this-to-a-long-random-secret
+      # Leave BASE_PATH empty to serve at root (http://nas-ip:3000)
+      BASE_PATH: ""
