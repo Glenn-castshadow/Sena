@@ -715,9 +715,16 @@ async function updateIsciPreview() {
     const same = existing.filter(c => c.media_type === typeEl.value);
     const nextSerial = (same.length > 0 ? Math.max(...same.map(c => c.serial)) : 0) + 1;
     const paddedSerial = String(nextSerial).padStart(3,'0');
-    const agencyCode = settings.agency_code || 'SA';
     const year = String(new Date().getFullYear()).slice(-2);
-    preview.textContent = `${agencyCode}${client.isci_code}${year}${paddedSerial}${typeEl.value}`;
+    // Only prepend agency code if this client traces back to the agency root
+    const agencyCode = settings.agency_code || 'SA';
+    // Walk to root; compare root's isci_code (e.g. 'SA') not its job code (e.g. 'SENA')
+    let rootClient = clients.find(c => c.id === Number(clientEl.value));
+    while (rootClient && rootClient.parent_id) rootClient = clients.find(c => c.id === rootClient.parent_id);
+    const prefix = (rootClient && rootClient.isci_code === agencyCode)
+      ? agencyCode + client.isci_code
+      : client.isci_code;
+    preview.textContent = `${prefix}${year}${paddedSerial}${typeEl.value}`;
     note.textContent = `Next serial: ${paddedSerial}`;
   } catch { preview.textContent = '—'; }
 }

@@ -9,9 +9,33 @@ function getNextIsciSerial(client_id, year, media_type) {
   return (row.max_serial || 0) + 1;
 }
 
-function buildCode(agencyCode, isciCode, year, serial, media_type) {
+function buildCode(prefix, year, serial, media_type) {
   const paddedSerial = String(serial).padStart(3, '0');
-  return `${agencyCode}${isciCode}${year}${paddedSerial}${media_type}`;
+  return `${prefix}${year}${paddedSerial}${media_type}`;
+}
+
+// Walk up parent chain; return root client
+function getRootClient(clientId) {
+  let c = db.prepare('SELECT id, code, parent_id FROM clients WHERE id = ?').get(clientId);
+  while (c && c.parent_id) {
+    c = db.prepare('SELECT id, code, parent_id FROM clients WHERE id = ?').get(c.parent_id);
+  }
+  return c;
+}
+
+// Build the ISCI prefix for a client:
+// - If the client's root ancestor matches the agency code, prefix = agencyCode + client.isci_code
+// - Otherwise the client's own isci_code IS the full prefix (standalone client)
+function getIsciPrefix(client) {
+  const agencyCode = db.prepare("SELECT value FROM settings WHERE key = 'agency_code'").get()?.value || 'SA';
+  const root = getRootClient(client.id);
+  if (root && root.isci_code === agencyCode) {
+    // Client IS the root agency — isci_code is already the full prefix
+    if (root.id === client.id) return agencyCode;
+    return agencyCode + client.isci_code;
+  }
+  // Standalone client — their isci_code IS the full prefix
+  return client.isci_code;
 }
 
 router.get('/', (req, res) => {
@@ -49,12 +73,10 @@ router.post('/', (req, res) => {
   const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(client_id);
   if (!client) return res.status(400).json({ error: 'Client not found' });
 
-  const agencyRow = db.prepare("SELECT value FROM settings WHERE key = 'agency_code'").get();
-  const agencyCode = agencyRow ? agencyRow.value : 'SA';
-
+  const prefix = getIsciPrefix(client);
   const currentYear = year || String(new Date().getFullYear()).slice(-2);
   const serial = getNextIsciSerial(client_id, currentYear, media_type);
-  const code = buildCode(agencyCode, client.isci_code, currentYear, serial, media_type);
+  const code = buildCode(prefix, currentYear, serial, media_type);
 
   const created_by_id = req.session?.userId || null;
   const result = db.prepare(
