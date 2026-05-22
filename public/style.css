@@ -200,12 +200,33 @@ thead th {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
 }
 tbody td {
   padding: 11px 12px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 0; /* forces ellipsis to work with table-layout:fixed */
 }
+
+/* Column resize handle */
+.col-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  z-index: 2;
+  border-right: 2px solid transparent;
+  transition: border-color 0.15s;
+}
+.col-resize-handle:hover,
+.col-resize-handle.dragging { border-right-color: var(--accent); }
 tbody tr:hover td { background: var(--surface); }
 tbody tr.voided td { opacity: 0.45; }
 tbody tr.voided .job-number,

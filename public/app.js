@@ -72,6 +72,45 @@ async function populateCreatorFilters() {
   });
 }
 
+// ── Resizable columns ──────────────────────────────────────────────────────
+function initResizableCols(tableEl) {
+  if (!tableEl || tableEl.dataset.resizable) return;
+  tableEl.dataset.resizable = '1';
+
+  const ths = [...tableEl.querySelectorAll('thead th')];
+  // Capture natural widths then lock them so table-layout:fixed respects them
+  ths.forEach(th => { th.style.width = th.offsetWidth + 'px'; });
+  tableEl.style.tableLayout = 'fixed';
+
+  ths.forEach(th => {
+    const handle = document.createElement('div');
+    handle.className = 'col-resize-handle';
+    th.appendChild(handle);
+
+    handle.addEventListener('mousedown', e => {
+      const startX = e.clientX;
+      const startW = th.offsetWidth;
+      handle.classList.add('dragging');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+
+      const onMove = e => {
+        th.style.width = Math.max(40, startW + e.clientX - startX) + 'px';
+      };
+      const onUp = () => {
+        handle.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      e.preventDefault();
+    });
+  });
+}
+
 // ── Navigation ─────────────────────────────────────────────────────────────
 document.querySelectorAll('.nav-links a').forEach(a => {
   a.addEventListener('click', e => {
@@ -81,10 +120,10 @@ document.querySelectorAll('.nav-links a').forEach(a => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     a.classList.add('active');
     document.getElementById('page-' + page).classList.add('active');
-    if (page === 'jobs') loadJobs();
-    if (page === 'isci') loadIsci();
-    if (page === 'clients') loadClients();
-    if (page === 'users') loadUsers();
+    if (page === 'jobs') loadJobs().then(() => initResizableCols(document.getElementById('jobs-table')));
+    if (page === 'isci') loadIsci().then(() => initResizableCols(document.getElementById('isci-table')));
+    if (page === 'clients') loadClients().then(() => initResizableCols(document.querySelector('#page-clients table')));
+    if (page === 'users') loadUsers().then(() => initResizableCols(document.querySelector('#page-users table')));
     if (page === 'settings') loadSettings();
   });
 });
@@ -758,6 +797,7 @@ async function init() {
   await fetchClients();
   await populateCreatorFilters();
   await loadJobs();
+  initResizableCols(document.getElementById('jobs-table'));
 }
 
 init();
