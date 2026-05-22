@@ -531,7 +531,7 @@ async function loadJobs() {
     }
 
     const statusBtn = editable
-      ? `<button class="status-cycle-btn status-${j.status}" onclick="cycleJobStatus(${j.id},'${j.status}')" title="Click to advance status">${STATUS_LABEL[j.status] || j.status}</button>`
+      ? `<button class="status-cycle-btn status-${j.status}" onclick="cycleJobStatus(${j.id},'${j.status}')" title="Toggle Active / Ready to Bill">${STATUS_LABEL[j.status] || j.status}</button>`
       : `<span class="badge badge-${j.status}">${STATUS_LABEL[j.status] || j.status}</span>`;
 
     return `
@@ -565,11 +565,10 @@ async function submitNewJob(e) {
 }
 
 async function cycleJobStatus(id, current) {
-  const cycle = { active: 'billable', billable: 'archived', archived: 'active', voided: 'active' };
-  const next = cycle[current] || 'active';
-  if (next === 'archived') {
-    if (!confirm('Mark this job as Archived? It will be hidden from the main list.\nYou can restore it from Archive → Restore.')) return;
-  }
+  // Toggle between Active and Ready to Bill only.
+  // Archiving is done deliberately via the Archive modal.
+  const toggle = { active: 'billable', billable: 'active', voided: 'active', archived: 'active' };
+  const next = toggle[current] || 'active';
   await api(`/api/jobs/${id}/status`, { method: 'PATCH', body: { status: next } });
   await loadJobs();
 }
