@@ -207,6 +207,7 @@ tbody td {
   padding: 11px 12px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
