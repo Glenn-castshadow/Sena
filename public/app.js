@@ -740,11 +740,11 @@ async function updateIsciPreview() {
     const nextSerial = (same.length > 0 ? Math.max(...same.map(c => c.serial)) : 0) + 1;
     const paddedSerial = String(nextSerial).padStart(3, '0');
     const year = String(new Date().getFullYear()).slice(-2);
-    const agencyCode = settings.agency_code || 'SA';
+    // Walk to root; prefix = root.isci_code + client.isci_code (or just isci_code if client IS root)
     let rootClient = clients.find(c => c.id === Number(clientEl.value));
     while (rootClient && rootClient.parent_id) rootClient = clients.find(c => c.id === rootClient.parent_id);
-    const prefix = (rootClient && rootClient.isci_code === agencyCode)
-      ? agencyCode + client.isci_code : client.isci_code;
+    const isRoot = !rootClient || rootClient.id === client.id;
+    const prefix = isRoot ? client.isci_code : rootClient.isci_code + client.isci_code;
     const generated = `${prefix}${year}${paddedSerial}${typeEl.value}`;
     if (input) { input.value = generated; }
     note.textContent = `Auto-generated (serial ${paddedSerial}) — edit to override`;
@@ -1002,7 +1002,6 @@ async function loadSettings() {
   settings = await api('/api/settings');
   document.getElementById('setting-jobs-root').value = settings.jobs_root || '';
   document.getElementById('setting-template-folder').value = settings.template_folder || '';
-  document.getElementById('setting-agency-code').value = settings.agency_code || 'SA';
   document.getElementById('setting-next-serial').value = settings.next_job_serial || '1';
 }
 
@@ -1032,7 +1031,6 @@ async function saveSettings() {
     const data = {
       jobs_root: document.getElementById('setting-jobs-root').value.trim(),
       template_folder: document.getElementById('setting-template-folder').value.trim(),
-      agency_code: document.getElementById('setting-agency-code').value.trim().toUpperCase(),
       next_job_serial: document.getElementById('setting-next-serial').value,
     };
     await api('/api/settings', { method: 'POST', body: data });

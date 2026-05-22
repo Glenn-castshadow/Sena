@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sena Advertising — Job Tracker</title>
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
   <div id="app">
@@ -184,11 +184,7 @@
             </div>
             <small>Folder whose subfolder structure is copied into every new job. Leave blank to use the default structure.</small>
           </div>
-          <div class="form-group">
-            <label>Agency ISCI Prefix</label>
-            <input type="text" id="setting-agency-code" placeholder="SA" maxlength="4">
-            <small>Two-letter prefix prepended to all ISCI codes (default: SA)</small>
-          </div>
+          <!-- Agency ISCI prefix is now derived automatically from the client hierarchy -->
           <div class="form-group">
             <label>Next Job Serial Number</label>
             <input type="number" id="setting-next-serial" min="1">
@@ -477,6 +473,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=9"></script>
 </body>
 </html>

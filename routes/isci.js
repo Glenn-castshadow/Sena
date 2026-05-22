@@ -24,19 +24,15 @@ function getRootClient(clientId) {
   return c;
 }
 
-// Build the ISCI prefix for a client:
-// - If the client's root ancestor matches the agency code, prefix = agencyCode + client.isci_code
-// - Otherwise the client's own isci_code IS the full prefix (standalone client)
+// Build the ISCI prefix from the client hierarchy:
+// - Root (top-level) client: use their own isci_code as the full prefix
+// - Child client: root's isci_code + client's own isci_code
+// e.g. KMK (child of Sena Advertising, SA) → prefix = 'SA' + 'KMK' = 'SAKMK'
+// e.g. SDCCU (root, isci_code 'DC') → prefix = 'DC'
 function getIsciPrefix(client) {
-  const agencyCode = db.prepare("SELECT value FROM settings WHERE key = 'agency_code'").get()?.value || 'SA';
   const root = getRootClient(client.id);
-  if (root && root.isci_code === agencyCode) {
-    // Client IS the root agency — isci_code is already the full prefix
-    if (root.id === client.id) return agencyCode;
-    return agencyCode + client.isci_code;
-  }
-  // Standalone client — their isci_code IS the full prefix
-  return client.isci_code;
+  if (!root || root.id === client.id) return client.isci_code;
+  return root.isci_code + client.isci_code;
 }
 
 router.get('/', (req, res) => {
