@@ -780,7 +780,13 @@ async function pickTemplateFolder() {
   }
 }
 
-// ── Archive / Export ───────────────────────────────────────────────────────
+// ── Archive / Restore ──────────────────────────────────────────────────────
+function switchArchiveTab(tab) {
+  document.getElementById('archive-panel').style.display  = tab === 'archive' ? '' : 'none';
+  document.getElementById('restore-panel').style.display  = tab === 'restore' ? '' : 'none';
+  document.getElementById('tab-archive').classList.toggle('active', tab === 'archive');
+  document.getElementById('tab-restore').classList.toggle('active', tab === 'restore');
+}
 async function previewArchive() {
   const from = document.getElementById('archive-from').value;
   const to   = document.getElementById('archive-to').value;
@@ -822,6 +828,43 @@ function exportCsv() {
   a.href = `${BASE}/api/jobs/export-csv?from=${from}&to=${to}`;
   a.download = `sena-jobs-${from}-to-${to}.csv`;
   a.click();
+}
+
+async function previewRestore() {
+  const from = document.getElementById('restore-from').value;
+  const to   = document.getElementById('restore-to').value;
+  const preview = document.getElementById('restore-preview');
+  const btn = document.getElementById('btn-restore');
+  if (!from || !to || from > to) {
+    preview.classList.add('hidden');
+    btn.disabled = true;
+    return;
+  }
+  preview.classList.remove('hidden');
+  preview.textContent = 'Checking…';
+  try {
+    const data = await api(`/api/jobs/restore-preview?from=${from}&to=${to}`);
+    if (data.jobs === 0) {
+      preview.innerHTML = `<span class="preview-none">No archived jobs found in this date range.</span>`;
+      btn.disabled = true;
+    } else {
+      preview.innerHTML = `<strong>${data.jobs}</strong> job${data.jobs !== 1 ? 's' : ''} and <strong>${data.isci}</strong> ISCI code${data.isci !== 1 ? 's' : ''} will be restored to active.`;
+      btn.disabled = false;
+    }
+  } catch(e) { preview.textContent = 'Error: ' + e.message; }
+}
+
+async function restoreRecords() {
+  const from = document.getElementById('restore-from').value;
+  const to   = document.getElementById('restore-to').value;
+  if (!from || !to) return;
+  const preview = document.getElementById('restore-preview');
+  try {
+    const data = await api('/api/jobs/restore', { method: 'POST', body: { from, to } });
+    preview.innerHTML = `<span class="preview-done">✓ Restored ${data.restored_jobs} jobs and ${data.restored_isci} ISCI codes to active.</span>`;
+    document.getElementById('btn-restore').disabled = true;
+    await loadJobs();
+  } catch(e) { alert('Restore failed: ' + e.message); }
 }
 
 async function archiveRecords() {

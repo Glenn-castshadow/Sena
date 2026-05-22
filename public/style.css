@@ -504,6 +504,29 @@ tbody tr.voided .isci-code { text-decoration: line-through; }
   margin-bottom: 4px;
 }
 
+/* ARCHIVE / RESTORE TABS */
+.archive-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.archive-tab {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 16px 10px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.archive-tab:hover { color: var(--text); }
+.archive-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
 /* ARCHIVE MODAL */
 .archive-hint {
   font-size: 13px;

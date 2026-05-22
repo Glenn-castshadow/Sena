@@ -383,28 +383,57 @@
     </div>
   </div>
 
-  <!-- MODAL: Archive -->
+  <!-- MODAL: Archive / Restore -->
   <div id="modal-archive" class="modal-backdrop" onclick="closeModalBackdrop(event,'modal-archive')">
     <div class="modal">
       <div class="modal-header">
-        <h2>Archive Jobs</h2>
+        <h2 id="archive-modal-title">Archive Jobs</h2>
         <button class="modal-close" onclick="closeModal('modal-archive')">✕</button>
       </div>
-      <p class="archive-hint">Jobs and their linked ISCI codes will be hidden from the main list. They stay in the database and can be restored if needed. Export to CSV before archiving to keep a local copy.</p>
-      <div class="form-group">
-        <label>Date Range</label>
-        <div class="date-range-row">
-          <input type="date" id="archive-from" onchange="previewArchive()">
-          <span class="date-range-sep">to</span>
-          <input type="date" id="archive-to" onchange="previewArchive()">
+
+      <!-- Tabs -->
+      <div class="archive-tabs">
+        <button class="archive-tab active" id="tab-archive" onclick="switchArchiveTab('archive')">Archive</button>
+        <button class="archive-tab" id="tab-restore" onclick="switchArchiveTab('restore')">Restore</button>
+      </div>
+
+      <!-- Archive panel -->
+      <div id="archive-panel">
+        <p class="archive-hint">Jobs and their linked ISCI codes will be hidden from the main list. They stay in the database. Export to CSV first to keep a local copy.</p>
+        <div class="form-group">
+          <label>Date Range</label>
+          <div class="date-range-row">
+            <input type="date" id="archive-from" onchange="previewArchive()">
+            <span class="date-range-sep">to</span>
+            <input type="date" id="archive-to" onchange="previewArchive()">
+          </div>
+        </div>
+        <div id="archive-preview" class="archive-preview hidden"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-archive')">Cancel</button>
+          <button type="button" class="btn btn-secondary" id="btn-export-csv" onclick="exportCsv()" disabled>Export CSV</button>
+          <button type="button" class="btn btn-danger" id="btn-archive" onclick="archiveRecords()" disabled>Archive</button>
         </div>
       </div>
-      <div id="archive-preview" class="archive-preview hidden"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeModal('modal-archive')">Cancel</button>
-        <button type="button" class="btn btn-secondary" id="btn-export-csv" onclick="exportCsv()" disabled>Export CSV</button>
-        <button type="button" class="btn btn-danger" id="btn-archive" onclick="archiveRecords()" disabled>Archive</button>
+
+      <!-- Restore panel -->
+      <div id="restore-panel" style="display:none">
+        <p class="archive-hint">Select a date range to find archived jobs and restore them back to the active list.</p>
+        <div class="form-group">
+          <label>Date Range</label>
+          <div class="date-range-row">
+            <input type="date" id="restore-from" onchange="previewRestore()">
+            <span class="date-range-sep">to</span>
+            <input type="date" id="restore-to" onchange="previewRestore()">
+          </div>
+        </div>
+        <div id="restore-preview" class="archive-preview hidden"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modal-archive')">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btn-restore" onclick="restoreRecords()" disabled>Restore</button>
+        </div>
       </div>
+
     </div>
   </div>
 

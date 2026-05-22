@@ -141,7 +141,7 @@ router.get('/', (req, res) => {
   res.json(db.prepare(sql).all(...params));
 });
 
-// ── Archive / Export (must be before /:id) ────────────────────────────────
+// ── Archive / Export / Restore (must be before /:id) ──────────────────────
 router.get('/archive-preview', (req, res) => {
   const { from, to } = req.query;
   if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
@@ -191,6 +191,41 @@ router.post('/archive', (req, res) => {
     });
   })();
   res.json({ archived_jobs: jobs.length, archived_isci: archivedIsci });
+});
+
+// Preview count of archived records in a date range
+router.get('/restore-preview', (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
+  const jobs = db.prepare(`
+    SELECT id FROM jobs
+    WHERE status = 'archived'
+      AND date(created_at) >= date(?) AND date(created_at) <= date(?)
+  `).all(from, to);
+  const isciCount = jobs.reduce((n, j) => {
+    return n + db.prepare("SELECT COUNT(*) as c FROM isci_codes WHERE job_id = ? AND status = 'archived'").get(j.id).c;
+  }, 0);
+  res.json({ jobs: jobs.length, isci: isciCount });
+});
+
+// Restore archived jobs (and their ISCIs) in a date range back to active
+router.post('/restore', (req, res) => {
+  const { from, to } = req.body;
+  if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
+  const jobs = db.prepare(`
+    SELECT id FROM jobs
+    WHERE status = 'archived'
+      AND date(created_at) >= date(?) AND date(created_at) <= date(?)
+  `).all(from, to);
+  if (jobs.length === 0) return res.json({ restored_jobs: 0, restored_isci: 0 });
+  let restoredIsci = 0;
+  db.transaction(() => {
+    jobs.forEach(j => {
+      db.prepare("UPDATE jobs SET status = 'active' WHERE id = ?").run(j.id);
+      restoredIsci += db.prepare("UPDATE isci_codes SET status = 'active' WHERE job_id = ? AND status = 'archived'").run(j.id).changes;
+    });
+  })();
+  res.json({ restored_jobs: jobs.length, restored_isci: restoredIsci });
 });
 
 router.get('/:id', (req, res) => {
