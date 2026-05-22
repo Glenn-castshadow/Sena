@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sena Advertising — Job Tracker</title>
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <div id="app">
@@ -92,6 +92,7 @@
             <option value="">All Types</option>
             <option value="H">HD Video</option>
             <option value="R">Radio</option>
+            <option value="D">Digital</option>
           </select>
           <select id="isci-filter-creator" onchange="loadIsci()" style="display:none">
             <option value="">All Users</option>
@@ -250,6 +251,7 @@
           <select id="ni-type" required onchange="updateIsciPreview()">
             <option value="H">HD Video (H)</option>
             <option value="R">Radio (R)</option>
+            <option value="D">Digital (D)</option>
           </select>
         </div>
         <div class="form-group">
@@ -466,6 +468,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

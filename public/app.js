@@ -670,7 +670,7 @@ async function loadIsci() {
     <tr class="${voided ? 'voided' : ''}">
       <td><span class="isci-code isci-copyable" onclick="copyIsci(this,'${escHtml(c.code)}')" title="Click to copy">${escHtml(c.code)}</span></td>
       <td>${escHtml(c.client_name)}</td>
-      <td><span class="badge badge-${c.media_type}">${c.media_type === 'H' ? 'HD Video' : 'Radio'}</span></td>
+      <td><span class="badge badge-${c.media_type}">${{H:'HD Video',R:'Radio',D:'Digital'}[c.media_type] || c.media_type}</span></td>
       <td>${escHtml(c.description || '-')}</td>
       <td>${c.job_number ? `<code>${escHtml(c.job_number)}</code>` : '-'}</td>
       <td>${fmtDate(c.created_at)}</td>

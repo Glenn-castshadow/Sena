@@ -75,7 +75,7 @@ router.get('/', (req, res) => {
 router.post('/', (req, res) => {
   const { client_id, job_id, media_type, description, notes, year } = req.body;
   if (!client_id || !media_type) return res.status(400).json({ error: 'client_id and media_type are required' });
-  if (!['H', 'R'].includes(media_type)) return res.status(400).json({ error: 'media_type must be H or R' });
+  if (!['H', 'R', 'D'].includes(media_type)) return res.status(400).json({ error: 'media_type must be H, R, or D' });
 
   const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(client_id);
   if (!client) return res.status(400).json({ error: 'Client not found' });
