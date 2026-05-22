@@ -38,16 +38,16 @@
           <button id="btn-new-job" class="btn btn-primary editor-only" onclick="openModal('modal-new-job')">+ New Job</button>
         </div>
         <div class="toolbar">
-          <input type="text" id="job-search" placeholder="Search jobs, descriptions, notes…" oninput="loadJobs()">
-          <select id="job-filter-group" onchange="onGroupFilterChange()">
-            <option value="">All Groups</option>
-          </select>
           <select id="job-filter-client" onchange="loadJobs()">
             <option value="">All Clients</option>
+          </select>
+          <select id="job-filter-group" onchange="onGroupFilterChange()">
+            <option value="">All Groups</option>
           </select>
           <select id="job-filter-creator" onchange="loadJobs()" style="display:none">
             <option value="">All Users</option>
           </select>
+          <input type="text" id="job-search" placeholder="Search jobs, descriptions, notes…" oninput="loadJobs()">
           <label class="toggle-label">
             <input type="checkbox" id="job-show-voided" onchange="loadJobs()"> Show voided
           </label>
