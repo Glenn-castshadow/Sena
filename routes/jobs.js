@@ -142,20 +142,41 @@ router.get('/', (req, res) => {
 });
 
 // ── Archive / Export / Restore (must be before /:id) ──────────────────────
-router.get('/archive-preview', (req, res) => {
+
+// Active jobs in a date range — for the archive checklist
+router.get('/active-list', (req, res) => {
   const { from, to } = req.query;
   if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
-  const jobs = getArchiveRange(from, to);
-  const isciCount = jobs.reduce((n, j) => {
-    return n + db.prepare("SELECT COUNT(*) as c FROM isci_codes WHERE job_id = ? AND status != 'archived'").get(j.id).c;
-  }, 0);
-  res.json({ jobs: jobs.length, isci: isciCount });
+  const jobs = db.prepare(`
+    SELECT j.id, j.job_number, j.serial, j.description, j.created_at,
+           c.name as client_name, c.code as client_code,
+           (SELECT COUNT(*) FROM isci_codes WHERE job_id = j.id AND status != 'archived') as isci_count
+    FROM jobs j JOIN clients c ON j.client_id = c.id
+    WHERE j.status != 'archived'
+      AND date(j.created_at) >= date(?) AND date(j.created_at) <= date(?)
+    ORDER BY j.serial ASC
+  `).all(from, to);
+  res.json(jobs);
 });
 
+// Export CSV for specific job IDs (comma-separated)
 router.get('/export-csv', (req, res) => {
-  const { from, to } = req.query;
-  if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
-  const jobs = getArchiveRange(from, to);
+  const { ids, from, to } = req.query;
+  let jobs;
+  let label = from && to ? `${from}-to-${to}` : 'export';
+
+  if (ids) {
+    const idList = ids.split(',').map(Number).filter(Boolean);
+    jobs = idList.map(id => db.prepare(`
+      SELECT j.*, c.name as client_name, c.code as client_code, u.username as created_by_username
+      FROM jobs j JOIN clients c ON j.client_id = c.id
+      LEFT JOIN users u ON j.created_by_id = u.id WHERE j.id = ?
+    `).get(id)).filter(Boolean);
+  } else {
+    if (!from || !to) return res.status(400).json({ error: 'ids or from+to required' });
+    jobs = getArchiveRange(from, to);
+  }
+
   const escape = v => {
     const s = String(v ?? '');
     return s.includes(',') || s.includes('"') || s.includes('\n')
@@ -174,23 +195,24 @@ router.get('/export-csv', (req, res) => {
       .forEach(i => isciRows.push(['', i.code, i.client_name, i.media_type === 'H' ? 'HD Video' : 'Radio', i.description || '', j.job_number, i.created_at || '', i.status].map(escape).join(',')));
   });
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename="sena-jobs-${from}-to-${to}.csv"`);
+  res.setHeader('Content-Disposition', `attachment; filename="sena-jobs-${label}.csv"`);
   res.send([headers.join(','), ...rows, '', 'ISCI CODES', isciHeaders.join(','), ...isciRows].join('\r\n'));
 });
 
+// Archive specific jobs by ID array
 router.post('/archive', (req, res) => {
-  const { from, to } = req.body;
-  if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
-  const jobs = getArchiveRange(from, to);
-  if (jobs.length === 0) return res.json({ archived_jobs: 0, archived_isci: 0 });
+  const { ids } = req.body;
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'ids array required' });
+  }
   let archivedIsci = 0;
   db.transaction(() => {
-    jobs.forEach(j => {
-      db.prepare("UPDATE jobs SET status = 'archived' WHERE id = ?").run(j.id);
-      archivedIsci += db.prepare("UPDATE isci_codes SET status = 'archived' WHERE job_id = ? AND status != 'archived'").run(j.id).changes;
+    ids.forEach(id => {
+      db.prepare("UPDATE jobs SET status = 'archived' WHERE id = ?").run(id);
+      archivedIsci += db.prepare("UPDATE isci_codes SET status = 'archived' WHERE job_id = ? AND status != 'archived'").run(id).changes;
     });
   })();
-  res.json({ archived_jobs: jobs.length, archived_isci: archivedIsci });
+  res.json({ archived_jobs: ids.length, archived_isci: archivedIsci });
 });
 
 // List archived jobs in a date range for the restore checklist

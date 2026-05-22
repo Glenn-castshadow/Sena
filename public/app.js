@@ -787,45 +787,69 @@ function switchArchiveTab(tab) {
   document.getElementById('tab-archive').classList.toggle('active', tab === 'archive');
   document.getElementById('tab-restore').classList.toggle('active', tab === 'restore');
 }
-async function previewArchive() {
+async function loadActiveList() {
   const from = document.getElementById('archive-from').value;
   const to   = document.getElementById('archive-to').value;
-  const preview = document.getElementById('archive-preview');
-  const btnExport  = document.getElementById('btn-export-csv');
-  const btnArchive = document.getElementById('btn-archive');
+  const listWrap = document.getElementById('archive-list-wrap');
+  const emptyEl  = document.getElementById('archive-empty');
+  const listEl   = document.getElementById('archive-list');
 
-  if (!from || !to || from > to) {
-    preview.classList.add('hidden');
-    btnExport.disabled = true;
-    btnArchive.disabled = true;
-    return;
-  }
+  listWrap.style.display = 'none';
+  emptyEl.classList.add('hidden');
+  document.getElementById('btn-export-csv').disabled = true;
+  document.getElementById('btn-archive').disabled = true;
+  if (!from || !to || from > to) return;
 
-  preview.classList.remove('hidden');
-  preview.textContent = 'Checking…';
+  listEl.innerHTML = '<div style="color:var(--text-muted);padding:8px 0">Loading…</div>';
+  listWrap.style.display = '';
+
   try {
-    const data = await api(`/api/jobs/archive-preview?from=${from}&to=${to}`);
-    if (data.jobs === 0) {
-      preview.innerHTML = `<span class="preview-none">No active jobs found in this date range.</span>`;
-      btnExport.disabled = true;
-      btnArchive.disabled = true;
-    } else {
-      preview.innerHTML = `<strong>${data.jobs}</strong> job${data.jobs !== 1 ? 's' : ''} and <strong>${data.isci}</strong> ISCI code${data.isci !== 1 ? 's' : ''} will be archived.`;
-      btnExport.disabled = false;
-      btnArchive.disabled = false;
+    const jobs = await api(`/api/jobs/active-list?from=${from}&to=${to}`);
+    if (jobs.length === 0) {
+      listWrap.style.display = 'none';
+      emptyEl.classList.remove('hidden');
+      return;
     }
+    listEl.innerHTML = jobs.map(j => `
+      <label class="restore-item">
+        <input type="checkbox" class="archive-cb" value="${j.id}" onchange="updateArchiveCount()">
+        <div class="restore-item-info">
+          <span class="restore-job-num">${j.serial}${escHtml(j.client_code)}</span>
+          <span class="restore-desc">${escHtml(j.description)}</span>
+          <span class="restore-meta">${fmtDate(j.created_at)}${j.isci_count > 0 ? ` \xb7 ${j.isci_count} ISCI` : ''}</span>
+        </div>
+      </label>
+    `).join('');
+    document.getElementById('archive-select-all').checked = false;
+    updateArchiveCount();
   } catch(e) {
-    preview.textContent = 'Error: ' + e.message;
+    listEl.innerHTML = `<div style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
 }
 
+function updateArchiveCount() {
+  const checked = [...document.querySelectorAll('.archive-cb:checked')];
+  const total   = document.querySelectorAll('.archive-cb').length;
+  document.getElementById('archive-selected-count').textContent =
+    checked.length > 0 ? `${checked.length} of ${total} selected` : '';
+  const has = checked.length > 0;
+  document.getElementById('btn-export-csv').disabled = !has;
+  document.getElementById('btn-archive').disabled = !has;
+  document.getElementById('archive-select-all').checked = checked.length === total && total > 0;
+}
+
+function toggleArchiveSelectAll(el) {
+  document.querySelectorAll('.archive-cb').forEach(cb => cb.checked = el.checked);
+  updateArchiveCount();
+}
+
 function exportCsv() {
+  const ids = [...document.querySelectorAll('.archive-cb:checked')].map(cb => cb.value).join(',');
+  if (!ids) return;
   const from = document.getElementById('archive-from').value;
   const to   = document.getElementById('archive-to').value;
-  if (!from || !to) return;
-  // Trigger download via link — the server streams the CSV file directly
   const a = document.createElement('a');
-  a.href = `${BASE}/api/jobs/export-csv?from=${from}&to=${to}`;
+  a.href = `${BASE}/api/jobs/export-csv?ids=${ids}&from=${from}&to=${to}`;
   a.download = `sena-jobs-${from}-to-${to}.csv`;
   a.click();
 }
@@ -899,17 +923,16 @@ async function restoreRecords() {
 }
 
 async function archiveRecords() {
-  const from = document.getElementById('archive-from').value;
-  const to   = document.getElementById('archive-to').value;
-  if (!from || !to) return;
-
-  const preview = document.getElementById('archive-preview');
-  const confirmed = confirm(`Archive all jobs from ${from} to ${to}?\n\nThis will hide them from the main list. Export CSV first if you want a local copy.`);
+  const ids = [...document.querySelectorAll('.archive-cb:checked')].map(cb => Number(cb.value));
+  if (ids.length === 0) return;
+  const confirmed = confirm(`Archive ${ids.length} selected job${ids.length !== 1 ? 's' : ''}?\n\nThey will be hidden from the main list but stay in the database.`);
   if (!confirmed) return;
-
   try {
-    const data = await api('/api/jobs/archive', { method: 'POST', body: { from, to } });
-    preview.innerHTML = `<span class="preview-done">✓ Archived ${data.archived_jobs} jobs and ${data.archived_isci} ISCI codes.</span>`;
+    const data = await api('/api/jobs/archive', { method: 'POST', body: { ids } });
+    document.getElementById('archive-list-wrap').style.display = 'none';
+    const emptyEl = document.getElementById('archive-empty');
+    emptyEl.classList.remove('hidden');
+    emptyEl.innerHTML = `<span class="preview-done">✓ Archived ${data.archived_jobs} job${data.archived_jobs !== 1 ? 's' : ''} and ${data.archived_isci} ISCI codes.</span>`;
     document.getElementById('btn-export-csv').disabled = true;
     document.getElementById('btn-archive').disabled = true;
     await loadJobs();
