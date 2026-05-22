@@ -213,6 +213,14 @@ tbody td {
   max-width: 0; /* forces ellipsis to work with table-layout:fixed */
 }
 
+/* Actions and folder cells must never be clipped */
+tbody td.actions,
+tbody td.folder-cell {
+  overflow: visible;
+  max-width: none;
+  white-space: nowrap;
+}
+
 /* Column resize handle */
 .col-resize-handle {
   position: absolute;
