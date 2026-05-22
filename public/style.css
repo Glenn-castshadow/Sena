@@ -468,7 +468,7 @@ tr.job-status-archived td { opacity: 0.4; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 10px 14px;
-  color: var(--accent);
+  color: var(--green);
   letter-spacing: 1px;
   word-break: break-all;
 }
