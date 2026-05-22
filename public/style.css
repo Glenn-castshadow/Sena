@@ -504,6 +504,48 @@ tbody tr.voided .isci-code { text-decoration: line-through; }
   margin-bottom: 4px;
 }
 
+/* ARCHIVE MODAL */
+.archive-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.date-range-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.date-range-row input[type="date"] {
+  width: auto;
+  flex: 1;
+}
+.date-range-sep {
+  color: var(--text-muted);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.archive-preview {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+.archive-preview.hidden { display: none; }
+.preview-none { color: var(--text-muted); }
+.preview-done { color: var(--green); }
+
+.btn-danger {
+  background: var(--red);
+  color: #fff;
+  border: none;
+}
+.btn-danger:hover { background: #dc2626; }
+.btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* DETAIL META */
 .detail-meta {
   display: flex;

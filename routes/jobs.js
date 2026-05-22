@@ -118,8 +118,10 @@ router.get('/', (req, res) => {
     WHERE 1=1
   `;
   const params = [];
+  // Never show archived in the main list — archived jobs are accessed via the archive modal only
   if (status === 'active') { sql += ' AND j.status = ?'; params.push('active'); }
   else if (status === 'voided') { sql += ' AND j.status = ?'; params.push('voided'); }
+  else { sql += ' AND j.status != ?'; params.push('archived'); }
 
   if (group_id) {
     // Include jobs belonging directly to the group OR any of its children
@@ -137,6 +139,58 @@ router.get('/', (req, res) => {
   }
   sql += ' ORDER BY j.serial DESC';
   res.json(db.prepare(sql).all(...params));
+});
+
+// ── Archive / Export (must be before /:id) ────────────────────────────────
+router.get('/archive-preview', (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
+  const jobs = getArchiveRange(from, to);
+  const isciCount = jobs.reduce((n, j) => {
+    return n + db.prepare("SELECT COUNT(*) as c FROM isci_codes WHERE job_id = ? AND status != 'archived'").get(j.id).c;
+  }, 0);
+  res.json({ jobs: jobs.length, isci: isciCount });
+});
+
+router.get('/export-csv', (req, res) => {
+  const { from, to } = req.query;
+  if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
+  const jobs = getArchiveRange(from, to);
+  const escape = v => {
+    const s = String(v ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n')
+      ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const headers = ['Job Number','Client','Description','Folder','Created','Status','Notes','Created By'];
+  const rows = jobs.map(j => [
+    j.job_number, j.client_name, j.description,
+    j.folder_path || '', j.created_at || '', j.status,
+    (j.notes || '').replace(/\n/g, ' '), j.created_by_username || ''
+  ].map(escape).join(','));
+  const isciHeaders = ['','ISCI Code','Client','Type','Description','Linked Job','Created','Status'];
+  const isciRows = [];
+  jobs.forEach(j => {
+    db.prepare(`SELECT i.*, c.name as client_name FROM isci_codes i JOIN clients c ON i.client_id = c.id WHERE i.job_id = ? AND i.status != 'archived'`).all(j.id)
+      .forEach(i => isciRows.push(['', i.code, i.client_name, i.media_type === 'H' ? 'HD Video' : 'Radio', i.description || '', j.job_number, i.created_at || '', i.status].map(escape).join(',')));
+  });
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', `attachment; filename="sena-jobs-${from}-to-${to}.csv"`);
+  res.send([headers.join(','), ...rows, '', 'ISCI CODES', isciHeaders.join(','), ...isciRows].join('\r\n'));
+});
+
+router.post('/archive', (req, res) => {
+  const { from, to } = req.body;
+  if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
+  const jobs = getArchiveRange(from, to);
+  if (jobs.length === 0) return res.json({ archived_jobs: 0, archived_isci: 0 });
+  let archivedIsci = 0;
+  db.transaction(() => {
+    jobs.forEach(j => {
+      db.prepare("UPDATE jobs SET status = 'archived' WHERE id = ?").run(j.id);
+      archivedIsci += db.prepare("UPDATE isci_codes SET status = 'archived' WHERE job_id = ? AND status != 'archived'").run(j.id).changes;
+    });
+  })();
+  res.json({ archived_jobs: jobs.length, archived_isci: archivedIsci });
 });
 
 router.get('/:id', (req, res) => {
@@ -228,5 +282,19 @@ router.post('/:id/recreate-folder', (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+function getArchiveRange(from, to) {
+  return db.prepare(`
+    SELECT j.*, c.name as client_name, c.code as client_code,
+           u.username as created_by_username
+    FROM jobs j
+    JOIN clients c ON j.client_id = c.id
+    LEFT JOIN users u ON j.created_by_id = u.id
+    WHERE j.status != 'archived'
+      AND date(j.created_at) >= date(?)
+      AND date(j.created_at) <= date(?)
+    ORDER BY j.serial ASC
+  `).all(from, to);
+}
 
 module.exports = router;

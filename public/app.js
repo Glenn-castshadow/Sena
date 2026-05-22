@@ -41,6 +41,9 @@ function applyRoleUI() {
   document.querySelectorAll('.editor-only').forEach(el => {
     el.style.display = canEdit() ? '' : 'none';
   });
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = currentUser?.role === 'admin' ? '' : 'none';
+  });
   const usersLi = document.getElementById('nav-users-li');
   if (usersLi) usersLi.style.display = currentUser?.role === 'admin' ? '' : 'none';
   const badge = document.getElementById('nav-role-badge');
@@ -774,6 +777,70 @@ async function pickTemplateFolder() {
   } finally {
     btn.textContent = 'Browse…';
     btn.disabled = false;
+  }
+}
+
+// ── Archive / Export ───────────────────────────────────────────────────────
+async function previewArchive() {
+  const from = document.getElementById('archive-from').value;
+  const to   = document.getElementById('archive-to').value;
+  const preview = document.getElementById('archive-preview');
+  const btnExport  = document.getElementById('btn-export-csv');
+  const btnArchive = document.getElementById('btn-archive');
+
+  if (!from || !to || from > to) {
+    preview.classList.add('hidden');
+    btnExport.disabled = true;
+    btnArchive.disabled = true;
+    return;
+  }
+
+  preview.classList.remove('hidden');
+  preview.textContent = 'Checking…';
+  try {
+    const data = await api(`/api/jobs/archive-preview?from=${from}&to=${to}`);
+    if (data.jobs === 0) {
+      preview.innerHTML = `<span class="preview-none">No active jobs found in this date range.</span>`;
+      btnExport.disabled = true;
+      btnArchive.disabled = true;
+    } else {
+      preview.innerHTML = `<strong>${data.jobs}</strong> job${data.jobs !== 1 ? 's' : ''} and <strong>${data.isci}</strong> ISCI code${data.isci !== 1 ? 's' : ''} will be archived.`;
+      btnExport.disabled = false;
+      btnArchive.disabled = false;
+    }
+  } catch(e) {
+    preview.textContent = 'Error: ' + e.message;
+  }
+}
+
+function exportCsv() {
+  const from = document.getElementById('archive-from').value;
+  const to   = document.getElementById('archive-to').value;
+  if (!from || !to) return;
+  // Trigger download via link — the server streams the CSV file directly
+  const a = document.createElement('a');
+  a.href = `${BASE}/api/jobs/export-csv?from=${from}&to=${to}`;
+  a.download = `sena-jobs-${from}-to-${to}.csv`;
+  a.click();
+}
+
+async function archiveRecords() {
+  const from = document.getElementById('archive-from').value;
+  const to   = document.getElementById('archive-to').value;
+  if (!from || !to) return;
+
+  const preview = document.getElementById('archive-preview');
+  const confirmed = confirm(`Archive all jobs from ${from} to ${to}?\n\nThis will hide them from the main list. Export CSV first if you want a local copy.`);
+  if (!confirmed) return;
+
+  try {
+    const data = await api('/api/jobs/archive', { method: 'POST', body: { from, to } });
+    preview.innerHTML = `<span class="preview-done">✓ Archived ${data.archived_jobs} jobs and ${data.archived_isci} ISCI codes.</span>`;
+    document.getElementById('btn-export-csv').disabled = true;
+    document.getElementById('btn-archive').disabled = true;
+    await loadJobs();
+  } catch(e) {
+    alert('Archive failed: ' + e.message);
   }
 }
 
