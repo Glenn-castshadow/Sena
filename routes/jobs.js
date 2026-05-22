@@ -193,39 +193,36 @@ router.post('/archive', (req, res) => {
   res.json({ archived_jobs: jobs.length, archived_isci: archivedIsci });
 });
 
-// Preview count of archived records in a date range
-router.get('/restore-preview', (req, res) => {
+// List archived jobs in a date range for the restore checklist
+router.get('/archived-list', (req, res) => {
   const { from, to } = req.query;
   if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
   const jobs = db.prepare(`
-    SELECT id FROM jobs
-    WHERE status = 'archived'
-      AND date(created_at) >= date(?) AND date(created_at) <= date(?)
+    SELECT j.id, j.job_number, j.serial, j.description, j.created_at,
+           c.name as client_name, c.code as client_code,
+           (SELECT COUNT(*) FROM isci_codes WHERE job_id = j.id AND status = 'archived') as isci_count
+    FROM jobs j JOIN clients c ON j.client_id = c.id
+    WHERE j.status = 'archived'
+      AND date(j.created_at) >= date(?) AND date(j.created_at) <= date(?)
+    ORDER BY j.serial ASC
   `).all(from, to);
-  const isciCount = jobs.reduce((n, j) => {
-    return n + db.prepare("SELECT COUNT(*) as c FROM isci_codes WHERE job_id = ? AND status = 'archived'").get(j.id).c;
-  }, 0);
-  res.json({ jobs: jobs.length, isci: isciCount });
+  res.json(jobs);
 });
 
-// Restore archived jobs (and their ISCIs) in a date range back to active
+// Restore specific jobs by ID array
 router.post('/restore', (req, res) => {
-  const { from, to } = req.body;
-  if (!from || !to) return res.status(400).json({ error: 'from and to dates required' });
-  const jobs = db.prepare(`
-    SELECT id FROM jobs
-    WHERE status = 'archived'
-      AND date(created_at) >= date(?) AND date(created_at) <= date(?)
-  `).all(from, to);
-  if (jobs.length === 0) return res.json({ restored_jobs: 0, restored_isci: 0 });
+  const { ids } = req.body;
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ error: 'ids array required' });
+  }
   let restoredIsci = 0;
   db.transaction(() => {
-    jobs.forEach(j => {
-      db.prepare("UPDATE jobs SET status = 'active' WHERE id = ?").run(j.id);
-      restoredIsci += db.prepare("UPDATE isci_codes SET status = 'active' WHERE job_id = ? AND status = 'archived'").run(j.id).changes;
+    ids.forEach(id => {
+      db.prepare("UPDATE jobs SET status = 'active' WHERE id = ? AND status = 'archived'").run(id);
+      restoredIsci += db.prepare("UPDATE isci_codes SET status = 'active' WHERE job_id = ? AND status = 'archived'").run(id).changes;
     });
   })();
-  res.json({ restored_jobs: jobs.length, restored_isci: restoredIsci });
+  res.json({ restored_jobs: ids.length, restored_isci: restoredIsci });
 });
 
 router.get('/:id', (req, res) => {

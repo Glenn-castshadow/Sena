@@ -418,19 +418,30 @@
 
       <!-- Restore panel -->
       <div id="restore-panel" style="display:none">
-        <p class="archive-hint">Select a date range to find archived jobs and restore them back to the active list.</p>
+        <p class="archive-hint">Find archived jobs by date range, then check the ones you want to restore.</p>
         <div class="form-group">
           <label>Date Range</label>
           <div class="date-range-row">
-            <input type="date" id="restore-from" onchange="previewRestore()">
+            <input type="date" id="restore-from" onchange="loadArchivedList()">
             <span class="date-range-sep">to</span>
-            <input type="date" id="restore-to" onchange="previewRestore()">
+            <input type="date" id="restore-to" onchange="loadArchivedList()">
           </div>
         </div>
-        <div id="restore-preview" class="archive-preview hidden"></div>
+        <div id="restore-list-wrap" style="display:none">
+          <div class="restore-list-header">
+            <label class="toggle-label">
+              <input type="checkbox" id="restore-select-all" onchange="toggleSelectAll(this)"> Select all
+            </label>
+            <span id="restore-selected-count" class="restore-count"></span>
+          </div>
+          <div id="restore-list" class="restore-list"></div>
+        </div>
+        <div id="restore-empty" class="archive-preview hidden">
+          <span class="preview-none">No archived jobs found in this date range.</span>
+        </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" onclick="closeModal('modal-archive')">Cancel</button>
-          <button type="button" class="btn btn-primary" id="btn-restore" onclick="restoreRecords()" disabled>Restore</button>
+          <button type="button" class="btn btn-primary" id="btn-restore" onclick="restoreRecords()" disabled>Restore Selected</button>
         </div>
       </div>
 

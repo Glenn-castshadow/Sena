@@ -830,38 +830,69 @@ function exportCsv() {
   a.click();
 }
 
-async function previewRestore() {
+async function loadArchivedList() {
   const from = document.getElementById('restore-from').value;
   const to   = document.getElementById('restore-to').value;
-  const preview = document.getElementById('restore-preview');
-  const btn = document.getElementById('btn-restore');
-  if (!from || !to || from > to) {
-    preview.classList.add('hidden');
-    btn.disabled = true;
-    return;
-  }
-  preview.classList.remove('hidden');
-  preview.textContent = 'Checking…';
+  const listWrap = document.getElementById('restore-list-wrap');
+  const emptyEl  = document.getElementById('restore-empty');
+  const listEl   = document.getElementById('restore-list');
+  const btn      = document.getElementById('btn-restore');
+
+  listWrap.style.display = 'none';
+  emptyEl.classList.add('hidden');
+  btn.disabled = true;
+  if (!from || !to || from > to) return;
+
+  listEl.innerHTML = '<div style="color:var(--text-muted);padding:8px 0">Loading…</div>';
+  listWrap.style.display = '';
+
   try {
-    const data = await api(`/api/jobs/restore-preview?from=${from}&to=${to}`);
-    if (data.jobs === 0) {
-      preview.innerHTML = `<span class="preview-none">No archived jobs found in this date range.</span>`;
-      btn.disabled = true;
-    } else {
-      preview.innerHTML = `<strong>${data.jobs}</strong> job${data.jobs !== 1 ? 's' : ''} and <strong>${data.isci}</strong> ISCI code${data.isci !== 1 ? 's' : ''} will be restored to active.`;
-      btn.disabled = false;
+    const jobs = await api(`/api/jobs/archived-list?from=${from}&to=${to}`);
+    if (jobs.length === 0) {
+      listWrap.style.display = 'none';
+      emptyEl.classList.remove('hidden');
+      return;
     }
-  } catch(e) { preview.textContent = 'Error: ' + e.message; }
+    listEl.innerHTML = jobs.map(j => `
+      <label class="restore-item">
+        <input type="checkbox" class="restore-cb" value="${j.id}" onchange="updateRestoreCount()">
+        <div class="restore-item-info">
+          <span class="restore-job-num">${j.serial}${escHtml(j.client_code)}</span>
+          <span class="restore-desc">${escHtml(j.description)}</span>
+          <span class="restore-meta">${fmtDate(j.created_at)}${j.isci_count > 0 ? ` · ${j.isci_count} ISCI` : ''}</span>
+        </div>
+      </label>
+    `).join('');
+    document.getElementById('restore-select-all').checked = false;
+    updateRestoreCount();
+  } catch(e) {
+    listEl.innerHTML = `<div style="color:var(--red)">${escHtml(e.message)}</div>`;
+  }
+}
+
+function updateRestoreCount() {
+  const checked = [...document.querySelectorAll('.restore-cb:checked')];
+  const total   = document.querySelectorAll('.restore-cb').length;
+  document.getElementById('restore-selected-count').textContent =
+    checked.length > 0 ? `${checked.length} of ${total} selected` : '';
+  document.getElementById('btn-restore').disabled = checked.length === 0;
+  document.getElementById('restore-select-all').checked = checked.length === total && total > 0;
+}
+
+function toggleSelectAll(el) {
+  document.querySelectorAll('.restore-cb').forEach(cb => cb.checked = el.checked);
+  updateRestoreCount();
 }
 
 async function restoreRecords() {
-  const from = document.getElementById('restore-from').value;
-  const to   = document.getElementById('restore-to').value;
-  if (!from || !to) return;
-  const preview = document.getElementById('restore-preview');
+  const ids = [...document.querySelectorAll('.restore-cb:checked')].map(cb => Number(cb.value));
+  if (ids.length === 0) return;
   try {
-    const data = await api('/api/jobs/restore', { method: 'POST', body: { from, to } });
-    preview.innerHTML = `<span class="preview-done">✓ Restored ${data.restored_jobs} jobs and ${data.restored_isci} ISCI codes to active.</span>`;
+    const data = await api('/api/jobs/restore', { method: 'POST', body: { ids } });
+    document.getElementById('restore-list-wrap').style.display = 'none';
+    const emptyEl = document.getElementById('restore-empty');
+    emptyEl.classList.remove('hidden');
+    emptyEl.innerHTML = `<span class="preview-done">✓ Restored ${data.restored_jobs} job${data.restored_jobs !== 1 ? 's' : ''} and ${data.restored_isci} ISCI code${data.restored_isci !== 1 ? 's' : ''} to active.</span>`;
     document.getElementById('btn-restore').disabled = true;
     await loadJobs();
   } catch(e) { alert('Restore failed: ' + e.message); }
