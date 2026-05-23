@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sena Advertising — Job Tracker</title>
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
   <div id="app">
@@ -44,22 +44,26 @@
           </div>
         </div>
         <div class="toolbar">
-          <select id="job-filter-client" onchange="loadJobs()">
-            <option value="">All Clients</option>
-          </select>
-          <select id="job-filter-group" onchange="onGroupFilterChange()">
-            <option value="">All Groups</option>
-          </select>
-          <select id="job-filter-creator" onchange="loadJobs()" style="display:none">
-            <option value="">All Users</option>
-          </select>
-          <input type="text" id="job-search" placeholder="Search jobs, descriptions, notes…" oninput="loadJobs()">
-          <div class="status-chips" id="job-status-chips">
-            <button class="chip chip-active active" data-status="active" onclick="toggleStatusChip(this)">● Active</button>
-            <button class="chip chip-billable active" data-status="billable" onclick="toggleStatusChip(this)">● R.T.B.</button>
-            <button class="chip chip-invoiced active" data-status="invoiced" onclick="toggleStatusChip(this)">● Inv'd</button>
-            <button class="chip chip-voided" data-status="voided" onclick="toggleStatusChip(this)">● Void</button>
-            <button class="chip chip-archived" data-status="archived" onclick="toggleStatusChip(this)">● Arch.</button>
+          <div class="toolbar-row">
+            <select id="job-filter-client" onchange="loadJobs()">
+              <option value="">All Clients</option>
+            </select>
+            <select id="job-filter-group" onchange="onGroupFilterChange()">
+              <option value="">All Groups</option>
+            </select>
+            <select id="job-filter-creator" onchange="loadJobs()" style="display:none">
+              <option value="">All Users</option>
+            </select>
+          </div>
+          <div class="toolbar-row">
+            <input type="text" id="job-search" placeholder="Search jobs, descriptions, notes…" oninput="loadJobs()">
+            <div class="status-chips" id="job-status-chips">
+              <button class="chip chip-active active" data-status="active" onclick="toggleStatusChip(this)">● Active</button>
+              <button class="chip chip-billable active" data-status="billable" onclick="toggleStatusChip(this)">● <span class="chip-label-full">Ready to Bill</span><span class="chip-label-short">R.T.B.</span></button>
+              <button class="chip chip-invoiced active" data-status="invoiced" onclick="toggleStatusChip(this)">● <span class="chip-label-full">Invoiced</span><span class="chip-label-short">Inv'd</span></button>
+              <button class="chip chip-voided" data-status="voided" onclick="toggleStatusChip(this)">● <span class="chip-label-full">Voided</span><span class="chip-label-short">Void</span></button>
+              <button class="chip chip-archived" data-status="archived" onclick="toggleStatusChip(this)">● <span class="chip-label-full">Archived</span><span class="chip-label-short">Arch.</span></button>
+            </div>
           </div>
         </div>
         <div class="table-wrap">
@@ -71,7 +75,7 @@
                 <th>Description</th>
                 <th>Folder</th>
                 <th>Created</th>
-                <th>Status</th>
+                <th class="status-cell">Status</th>
                 <th class="editor-only">Details</th>
               </tr>
             </thead>
@@ -87,22 +91,26 @@
           <button class="btn btn-primary editor-only" onclick="openModal('modal-new-isci')">+ New ISCI</button>
         </div>
         <div class="toolbar">
-          <input type="text" id="isci-search" placeholder="Search ISCI codes, descriptions…" oninput="loadIsci()">
-          <select id="isci-filter-client" onchange="loadIsci()">
-            <option value="">All Clients</option>
-          </select>
-          <select id="isci-filter-type" onchange="loadIsci()">
-            <option value="">All Types</option>
-            <option value="H">HD Video</option>
-            <option value="R">Radio</option>
-            <option value="D">Digital</option>
-          </select>
-          <select id="isci-filter-creator" onchange="loadIsci()" style="display:none">
-            <option value="">All Users</option>
-          </select>
-          <label class="toggle-label">
-            <input type="checkbox" id="isci-show-voided" onchange="loadIsci()"> Show voided
-          </label>
+          <div class="toolbar-row">
+            <select id="isci-filter-client" onchange="loadIsci()">
+              <option value="">All Clients</option>
+            </select>
+            <select id="isci-filter-type" onchange="loadIsci()">
+              <option value="">All Types</option>
+              <option value="H">HD Video</option>
+              <option value="R">Radio</option>
+              <option value="D">Digital</option>
+            </select>
+            <select id="isci-filter-creator" onchange="loadIsci()" style="display:none">
+              <option value="">All Users</option>
+            </select>
+          </div>
+          <div class="toolbar-row">
+            <input type="text" id="isci-search" placeholder="Search ISCI codes, descriptions…" oninput="loadIsci()">
+            <label class="toggle-label">
+              <input type="checkbox" id="isci-show-voided" onchange="loadIsci()"> Show voided
+            </label>
+          </div>
         </div>
         <div class="table-wrap">
           <table id="isci-table">
@@ -114,7 +122,7 @@
                 <th>Description</th>
                 <th>Linked Job</th>
                 <th>Created</th>
-                <th>Status</th>
+                <th class="status-cell">Status</th>
                 <th class="editor-only">Actions</th>
               </tr>
             </thead>
@@ -476,6 +484,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>

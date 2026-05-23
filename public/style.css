@@ -134,16 +134,21 @@ body {
 /* TOOLBAR */
 .toolbar {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.toolbar-row {
+  display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
   flex-wrap: wrap;
 }
-.toolbar input[type="text"] {
-  flex: 1;
+.toolbar-row input[type="text"] {
+  flex: none;
   min-width: 200px;
 }
-.toolbar select {
+.toolbar-row select {
   width: auto;
   min-width: 130px;
   flex-shrink: 0;
@@ -298,7 +303,12 @@ tbody tr.voided .isci-code { text-decoration: line-through; }
 
 .chip:hover { opacity: 0.7; }
 
+/* Responsive chip labels: show full on desktop, short on mobile */
+.chip-label-short { display: none; }
+
 /* 3-STATE STATUS CYCLE BUTTON */
+td.status-cell, th.status-cell { text-align: center; }
+
 .status-cycle-btn {
   display: inline-flex;
   align-items: center;
@@ -801,16 +811,17 @@ tr.job-status-archived td  { opacity: 0.4; }
   }
   .page-header h1 { font-size: 18px; }
 
-  .toolbar {
-    flex-wrap: wrap;
+  .toolbar-row {
     gap: 8px;
   }
-  .toolbar input[type="text"],
-  .toolbar select {
+  .toolbar-row input[type="text"],
+  .toolbar-row select {
     min-width: 0;
     flex: 1 1 140px;
   }
   .status-chips { flex-wrap: wrap; }
+  .chip-label-full { display: none; }
+  .chip-label-short { display: inline; }
 
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 

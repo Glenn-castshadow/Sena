@@ -83,6 +83,9 @@ if (!userCols.includes('active')) {
 if (!userCols.includes('role') || db.prepare("SELECT COUNT(*) as c FROM users WHERE role = 'user'").get().c > 0) {
   db.exec("UPDATE users SET role = 'admin' WHERE role = 'user'");
 }
+if (!userCols.includes('preferences')) {
+  db.exec('ALTER TABLE users ADD COLUMN preferences TEXT');
+}
 
 const clientCols = db.pragma('table_info(clients)').map(c => c.name);
 if (!clientCols.includes('parent_id')) {

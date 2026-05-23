@@ -61,4 +61,22 @@ router.get('/setup-needed', (req, res) => {
   res.json({ needed: count === 0 });
 });
 
+router.get('/preferences', (req, res) => {
+  if (!req.session.userId) return res.status(401).json({});
+  const user = db.prepare('SELECT preferences FROM users WHERE id = ?').get(req.session.userId);
+  try { res.json(JSON.parse(user?.preferences || '{}')); }
+  catch { res.json({}); }
+});
+
+router.patch('/preferences', (req, res) => {
+  if (!req.session.userId) return res.status(401).json({});
+  const user = db.prepare('SELECT preferences FROM users WHERE id = ?').get(req.session.userId);
+  let current = {};
+  try { current = JSON.parse(user?.preferences || '{}'); } catch {}
+  const updated = { ...current, ...req.body };
+  db.prepare('UPDATE users SET preferences = ? WHERE id = ?')
+    .run(JSON.stringify(updated), req.session.userId);
+  res.json(updated);
+});
+
 module.exports = router;

@@ -75,10 +75,27 @@ async function populateCreatorFilters() {
   });
 }
 
+// ── Search width sync ──────────────────────────────────────────────────────
+function initSearchSync(pageId, searchId) {
+  const row1 = document.querySelector(`#${pageId} .toolbar-row`);
+  const search = document.getElementById(searchId);
+  if (!row1 || !search) return;
+  const sync = () => {
+    const selects = [...row1.querySelectorAll('select')].filter(s => s.offsetParent !== null);
+    if (!selects.length) return;
+    const left  = selects[0].getBoundingClientRect().left;
+    const right = selects[selects.length - 1].getBoundingClientRect().right;
+    search.style.width = (right - left) + 'px';
+  };
+  sync();
+  new ResizeObserver(sync).observe(row1);
+}
+
 // ── Resizable columns ──────────────────────────────────────────────────────
 // Default column widths per table (px). Set by user preference.
 const COL_DEFAULTS = {
-  'jobs-table':  [136, 156, 231, 293, 123, 101, 153],
+  'jobs-table':  [136, 156, 211, 258, 112, 162, 153],
+  'isci-table':  [169, 133, 108, 209, 189, 156, 137, 293],
 };
 
 function initResizableCols(tableEl) {
@@ -89,13 +106,17 @@ function initResizableCols(tableEl) {
   const ths = [...tableEl.querySelectorAll('thead th')];
   const defaults = COL_DEFAULTS[tableEl.id];
 
+  const syncTableWidth = () => {
+    tableEl.style.width = ths.reduce((s, th) => s + (parseInt(th.style.width) || th.offsetWidth), 0) + 'px';
+  };
+
   if (!isMobile) {
     // Desktop: lock column widths and use fixed layout for resizing
     ths.forEach((th, i) => {
       th.style.width = (defaults && defaults[i] ? defaults[i] : th.offsetWidth) + 'px';
     });
     tableEl.style.tableLayout = 'fixed';
-    tableEl.style.width = 'auto';
+    syncTableWidth();
   }
   // Mobile: CSS handles auto layout — no inline widths set
 
@@ -116,6 +137,7 @@ function initResizableCols(tableEl) {
 
       const onMove = e => {
         th.style.width = Math.max(40, startW + e.clientX - startX) + 'px';
+        syncTableWidth();
       };
       const onUp = () => {
         handle.classList.remove('dragging');
@@ -151,8 +173,8 @@ document.querySelectorAll('.nav-links a').forEach(a => {
     a.classList.add('active');
     document.getElementById('page-' + page).classList.add('active');
     closeSidebar(); // close on mobile after nav
-    if (page === 'jobs') loadJobs().then(() => initResizableCols(document.getElementById('jobs-table')));
-    if (page === 'isci') loadIsci().then(() => initResizableCols(document.getElementById('isci-table')));
+    if (page === 'jobs') loadJobs().then(() => { initResizableCols(document.getElementById('jobs-table')); initSearchSync('page-jobs', 'job-search'); });
+    if (page === 'isci') loadIsci().then(() => { initResizableCols(document.getElementById('isci-table')); initSearchSync('page-isci', 'isci-search'); });
     if (page === 'clients') loadClients().then(() => initResizableCols(document.querySelector('#page-clients table')));
     if (page === 'users') loadUsers().then(() => initResizableCols(document.querySelector('#page-users table')));
     if (page === 'settings') loadSettings();
@@ -511,7 +533,25 @@ function getActiveStatusChips() {
 
 function toggleStatusChip(btn) {
   btn.classList.toggle('active');
+  saveStatusPrefs();
   loadJobs();
+}
+
+function saveStatusPrefs() {
+  const active = [...document.querySelectorAll('#job-status-chips .chip[data-status].active')]
+    .map(c => c.dataset.status);
+  fetch(BASE + '/auth/preferences', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ job_status_filters: active }),
+  }).catch(() => {});
+}
+
+function applyStatusPrefs(prefs) {
+  if (!Array.isArray(prefs.job_status_filters)) return;
+  document.querySelectorAll('#job-status-chips .chip[data-status]').forEach(chip => {
+    chip.classList.toggle('active', prefs.job_status_filters.includes(chip.dataset.status));
+  });
 }
 
 async function loadJobs() {
@@ -535,7 +575,8 @@ async function loadJobs() {
   const hasRoot = settings.jobs_root?.trim();
   const editable = canEdit();
 
-  const STATUS_LABEL = { active: '● Active', billable: '● R.T.B.', invoiced: "● Inv'd", voided: '● Void', archived: '● Arch.' };
+  const STATUS_FULL  = { active: 'Active', billable: 'Ready to Bill', invoiced: 'Invoiced', voided: 'Voided', archived: 'Archived' };
+  const STATUS_SHORT = { active: 'Active', billable: 'R.T.B.', invoiced: "Inv'd", voided: 'Void', archived: 'Arch.' };
 
   tbody.innerHTML = jobs.map(j => {
     let folderCell;
@@ -558,8 +599,8 @@ async function loadJobs() {
     }
 
     const statusBtn = editable
-      ? `<button class="status-cycle-btn status-${j.status}" onclick="cycleJobStatus(${j.id},'${j.status}')" title="Toggle Active / Ready to Bill">${STATUS_LABEL[j.status] || j.status}</button>`
-      : `<span class="badge badge-${j.status}">${STATUS_LABEL[j.status] || j.status}</span>`;
+      ? `<button class="status-cycle-btn status-${j.status}" onclick="cycleJobStatus(${j.id},'${j.status}')" title="Toggle Active / Ready to Bill">● <span class="chip-label-full">${STATUS_FULL[j.status] || j.status}</span><span class="chip-label-short">${STATUS_SHORT[j.status] || j.status}</span></button>`
+      : `<span class="badge badge-${j.status}">${STATUS_FULL[j.status] || j.status}</span>`;
 
     return `
     <tr class="job-status-${j.status}" id="job-row-${j.id}">
@@ -568,7 +609,7 @@ async function loadJobs() {
       <td>${escHtml(j.description)}</td>
       <td class="folder-cell">${folderCell}</td>
       <td>${fmtDate(j.created_at)}</td>
-      <td>${statusBtn}</td>
+      <td class="status-cell">${statusBtn}</td>
       ${editable ? `<td class="actions">
         <button class="btn btn-sm btn-ghost" onclick="openJobDetails(${j.id})">Details</button>
       </td>` : ''}
@@ -687,7 +728,7 @@ async function loadIsci() {
       <td>${escHtml(c.description || '-')}</td>
       <td>${c.job_number ? `<code>${escHtml(c.job_number)}</code>` : '-'}</td>
       <td>${fmtDate(c.created_at)}</td>
-      <td><span class="badge badge-${c.status}">${c.status}</span></td>
+      <td class="status-cell"><span class="badge badge-${c.status}">${c.status}</span></td>
       ${editable ? `<td class="actions">
         <button class="btn btn-sm btn-ghost" onclick="openIsciDetails(${c.id})">Details</button>
         <button class="btn btn-sm btn-ghost" onclick="toggleIsciStatus(${c.id},'${c.status}')">${voided ? 'Unvoid' : 'Void'}</button>
@@ -1267,8 +1308,15 @@ async function init() {
   await loadSettings();
   await fetchClients();
   await populateCreatorFilters();
+
+  try {
+    const prefs = await fetch(BASE + '/auth/preferences').then(r => r.json());
+    applyStatusPrefs(prefs);
+  } catch {}
+
   await loadJobs();
   initResizableCols(document.getElementById('jobs-table'));
+  initSearchSync('page-jobs', 'job-search');
 }
 
 init();
