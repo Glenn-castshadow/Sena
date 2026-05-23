@@ -2,62 +2,49 @@
 
 ---
 
-# Synology NAS — Docker (Container Manager)
+# Synology NAS — Docker
 
 ## What you need
-- Synology with Docker / Container Manager installed
+- Synology with Docker installed
 - SSH access to the NAS (enabled in DSM → Control Panel → Terminal & SNMP)
-- The `jobtracker` user already created on the NAS
 
-## 1. Copy the project to the NAS
+## Actual paths
 
-From your Windows machine, copy the project folder to the NAS — **without** `node_modules/` or `jobs.db`:
+| Thing | Path |
+|---|---|
+| Project (source + compose) | `/volume1/Satellite_Project_work/Sena_Advertising/Job_Tracking_system` |
+| Database volume | `/volume1/docker/job-tracker/data` |
+| NAS IP | `10.0.7.62` |
 
-```powershell
-# From your Windows machine (adjust the NAS share path)
-robocopy "Y:\Sena_Advertising\Job_Tracking_system" "\\NAS\homes\jobtracker\job-tracker" `
-  /E /XD node_modules .git .claude /XF jobs.db *.db-shm *.db-wal
+## 1. Clone the repo
+
+SSH in and clone to the project path:
+
+```bash
+git clone git@github.com:Glenn-castshadow/Sena.git \
+  /volume1/Satellite_Project_work/Sena_Advertising/Job_Tracking_system
 ```
-
-Or use File Station in DSM to drag-and-drop the folder (exclude `node_modules`).
-
-Target path on the NAS: `/var/services/homes/jobtracker/job-tracker/`
 
 ## 2. Create the data directory
 
-SSH into the NAS and create the persistent data directory:
-
 ```bash
 sudo mkdir -p /volume1/docker/job-tracker/data
-sudo chown jobtracker:users /volume1/docker/job-tracker/data
 ```
 
-## 3. Generate a session secret
+## 3. Create `.env.docker`
 
-Still over SSH:
+Create `.env.docker` next to `docker-compose.yml` — this file is gitignored and never baked into the image:
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+printf 'SESSION_SECRET=%s\n' "$(openssl rand -hex 32)" > \
+  /volume1/Satellite_Project_work/Sena_Advertising/Job_Tracking_system/.env.docker
 ```
 
-If Node isn't available on the host, you can generate one on your Windows machine first.
-
-## 4. Create `.env.docker` next to `docker-compose.yml`
-
-On the NAS, create `/var/services/homes/jobtracker/job-tracker/.env.docker`:
-
-```dotenv
-SESSION_SECRET=paste-your-generated-secret-here
-```
-
-This file is gitignored and never baked into the image.
-
-## 5. Build and start the container
+## 4. Build and start the container
 
 ```bash
-cd /var/services/homes/jobtracker/job-tracker
-sudo docker compose build
-sudo docker compose up -d
+cd /volume1/Satellite_Project_work/Sena_Advertising/Job_Tracking_system
+sudo docker-compose up -d --build
 ```
 
 The first build takes a few minutes — `better-sqlite3` compiles from source.
@@ -65,41 +52,46 @@ The first build takes a few minutes — `better-sqlite3` compiles from source.
 To confirm it's running:
 
 ```bash
-sudo docker compose logs -f
+sudo docker-compose logs -f
 ```
 
 You should see: `Sena Job Tracker running at http://localhost:3000/`
 
-## 6. Access the app
-
-Open a browser on any machine on the network:
+## 5. Access the app
 
 ```
-http://<NAS-IP>:3000
+http://10.0.7.62:3000
 ```
 
 The first visit shows the Create Admin Account screen.
 
 ## Updating the app
 
+The Synology checkout has local config modifications (`.env`, `config.js`, etc.) that are never committed. Use stash to preserve them across pulls:
+
 ```bash
-cd /var/services/homes/jobtracker/job-tracker
+cd /volume1/Satellite_Project_work/Sena_Advertising/Job_Tracking_system
 
-# Pull latest code (or copy updated files)
-git pull
+# Preserve local config, pull, restore
+git stash
+git pull origin main
+git stash pop
 
-# Rebuild and restart (database is safe — it's on the mounted volume)
-sudo docker compose build
-sudo docker compose up -d
+# Rebuild and restart (database is safe — it lives on the mounted volume)
+sudo docker-compose down
+sudo docker-compose up -d --build
 ```
+
+> **Note:** `docker-compose down` removes the stopped container before recreating it. If you skip it and the container is already stopped, `up` will fail with a "container name in use" conflict.
 
 ## Useful commands
 
 ```bash
-sudo docker compose logs -f sena-job-tracker    # live logs
-sudo docker compose restart                      # restart without rebuild
-sudo docker compose down                         # stop and remove container
-sudo docker compose up -d                        # start again
+sudo docker-compose logs -f sena-job-tracker    # live logs
+sudo docker-compose restart                      # restart without rebuild
+sudo docker-compose down                         # stop and remove container
+sudo docker-compose up -d                        # start (image already built)
+sudo docker-compose up -d --build               # rebuild image and start
 ```
 
 ---
