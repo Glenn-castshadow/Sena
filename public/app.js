@@ -535,7 +535,7 @@ async function loadJobs() {
   const hasRoot = settings.jobs_root?.trim();
   const editable = canEdit();
 
-  const STATUS_LABEL = { active: '● Active', billable: '● Ready to Bill', invoiced: '● Invoiced', voided: '● Voided', archived: '● Archived' };
+  const STATUS_LABEL = { active: '● Active', billable: '● R.T.B.', invoiced: "● Inv'd", voided: '● Void', archived: '● Arch.' };
 
   tbody.innerHTML = jobs.map(j => {
     let folderCell;
