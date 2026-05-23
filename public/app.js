@@ -563,7 +563,7 @@ async function loadJobs() {
 
     return `
     <tr class="job-status-${j.status}" id="job-row-${j.id}">
-      <td><span class="job-number isci-copyable" title="Click to copy: ${escHtml(j.job_number)}" onclick="copyJobNumber(this,'${escHtml(j.job_number)}')">${j.serial}${escHtml(j.client_code)}</span></td>
+      <td><span class="job-number isci-copyable" title="Click to copy job number" onclick="copyJobNumber(this,'${j.serial}${escHtml(j.client_code)}')">${j.serial}${escHtml(j.client_code)}</span></td>
       <td>${escHtml(j.client_name)}</td>
       <td>${escHtml(j.description)}</td>
       <td class="folder-cell">${folderCell}</td>
