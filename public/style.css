@@ -274,21 +274,29 @@ tbody tr.voided .isci-code { text-decoration: line-through; }
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  border: 1px solid transparent;
+  border: 1.5px solid currentColor;
   cursor: pointer;
-  opacity: 0.35;
-  transition: opacity 0.15s;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
   white-space: nowrap;
   background: none;
+  opacity: 0.4;
 }
-.chip.active { opacity: 1; }
-.chip-active   { color: var(--blue);       border-color: var(--blue);       }
-.chip-billable { color: var(--yellow);     border-color: var(--yellow);     }
-.chip-invoiced { color: var(--green);      border-color: var(--green);      }
-.chip-voided   { color: var(--text-muted); border-color: var(--text-muted); }
-.chip-archived { color: var(--red);        border-color: var(--red);        }
-.chip:hover   { opacity: 0.8; }
-.chip.active:hover { opacity: 0.85; }
+/* OFF: outline only, dimmed */
+.chip-active   { color: var(--blue); }
+.chip-billable { color: var(--yellow); }
+.chip-invoiced { color: var(--green); }
+.chip-voided   { color: var(--text-muted); }
+.chip-archived { color: var(--red); }
+
+/* ON: filled, full opacity — clearly active */
+.chip.active                { opacity: 1; color: #fff; }
+.chip-active.active         { background: var(--blue); }
+.chip-billable.active       { background: var(--yellow); color: #111; }
+.chip-invoiced.active       { background: var(--green);  color: #111; }
+.chip-voided.active         { background: var(--text-muted); }
+.chip-archived.active       { background: var(--red); }
+
+.chip:hover { opacity: 0.7; }
 
 /* 3-STATE STATUS CYCLE BUTTON */
 .status-cycle-btn {
