@@ -42,7 +42,7 @@ db.exec(`
     job_id INTEGER REFERENCES jobs(id),
     year TEXT NOT NULL,
     serial INTEGER NOT NULL,
-    media_type TEXT NOT NULL CHECK(media_type IN ('H','R')),
+    media_type TEXT NOT NULL CHECK(media_type IN ('H','R','D')),
     description TEXT,
     status TEXT DEFAULT 'active',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -100,6 +100,32 @@ if (!jobCols.includes('created_by_id')) {
 const isciCols = db.pragma('table_info(isci_codes)').map(c => c.name);
 if (!isciCols.includes('created_by_id')) {
   db.exec('ALTER TABLE isci_codes ADD COLUMN created_by_id INTEGER REFERENCES users(id)');
+}
+
+// Migration: expand media_type CHECK constraint to include 'D' (Digital)
+const isciSchemaSql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='isci_codes'").get()?.sql || '';
+if (!isciSchemaSql.includes("'D'")) {
+  db.pragma('foreign_keys = OFF');
+  db.exec(`
+    CREATE TABLE isci_codes_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL UNIQUE,
+      client_id INTEGER NOT NULL REFERENCES clients(id),
+      job_id INTEGER REFERENCES jobs(id),
+      year TEXT NOT NULL,
+      serial INTEGER NOT NULL,
+      media_type TEXT NOT NULL CHECK(media_type IN ('H','R','D')),
+      description TEXT,
+      status TEXT DEFAULT 'active',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      notes TEXT,
+      created_by_id INTEGER REFERENCES users(id)
+    );
+    INSERT INTO isci_codes_new SELECT * FROM isci_codes;
+    DROP TABLE isci_codes;
+    ALTER TABLE isci_codes_new RENAME TO isci_codes;
+  `);
+  db.pragma('foreign_keys = ON');
 }
 
 // Seed Sena Advertising as default client

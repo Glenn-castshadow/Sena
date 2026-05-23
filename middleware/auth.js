@@ -4,7 +4,7 @@ function requireAuth(req, res, next) {
   if (req.session && req.session.userId) {
     // Reject inactive users on every request
     const db = require('../database');
-    const user = db.prepare('SELECT active FROM users WHERE id = ?').get(req.session.userId);
+    const user = db.prepare('SELECT active, role FROM users WHERE id = ?').get(req.session.userId);
     if (!user || !user.active) {
       req.session.destroy(() => {});
       if (req.xhr || req.headers.accept?.includes('application/json')) {
@@ -12,6 +12,7 @@ function requireAuth(req, res, next) {
       }
       return res.redirect(`${BASE_PATH}/login`);
     }
+    req.session.role = user.role;
     return next();
   }
   if (req.xhr || req.headers.accept?.includes('application/json')) {

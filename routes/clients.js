@@ -2,6 +2,21 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 
+// Returns true if proposedParentId is already in the subtree rooted at clientId
+function wouldCreateCycle(clientId, proposedParentId) {
+  let id = Number(proposedParentId);
+  const seen = new Set();
+  while (id) {
+    if (id === Number(clientId)) return true;
+    if (seen.has(id)) break;
+    seen.add(id);
+    const row = db.prepare('SELECT parent_id FROM clients WHERE id = ?').get(id);
+    if (!row || !row.parent_id) break;
+    id = Number(row.parent_id);
+  }
+  return false;
+}
+
 router.get('/', (req, res) => {
   const clients = db.prepare(`
     SELECT c.*, p.name as parent_name, p.code as parent_code
@@ -30,9 +45,8 @@ router.post('/', (req, res) => {
 
 router.put('/:id', (req, res) => {
   const { name, code, isci_code, active, parent_id } = req.body;
-  // Prevent circular parenting
-  if (parent_id && Number(parent_id) === Number(req.params.id)) {
-    return res.status(400).json({ error: 'A client cannot be its own parent' });
+  if (parent_id && wouldCreateCycle(req.params.id, parent_id)) {
+    return res.status(400).json({ error: 'Cannot set parent: would create a circular hierarchy' });
   }
   try {
     db.prepare('UPDATE clients SET name=?, code=?, isci_code=?, active=?, parent_id=? WHERE id=?')

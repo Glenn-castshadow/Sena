@@ -253,6 +253,139 @@ test('group job filters include nested descendant clients', async () => {
   assert.ok(filtered.body.some((row) => row.id === job.body.id));
 });
 
+test('Digital ISCI (media_type D) can be created and is stored correctly', async () => {
+  const login = await requestJson('/auth/login', {
+    method: 'POST',
+    body: { username: 'admin', password: 'Password123!' },
+  });
+  assert.equal(login.response.status, 200);
+  const adminCookie = getCookie(login.response);
+
+  const clients = await requestJson('/api/clients', { headers: { Cookie: adminCookie } });
+  const sena = clients.body.find((c) => c.code === 'SENA');
+  assert.ok(sena);
+
+  const create = await requestJson('/api/isci', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: { client_id: sena.id, media_type: 'D', description: 'Digital smoke test' },
+  });
+  assert.equal(create.response.status, 200);
+  assert.equal(create.body.media_type, 'D');
+  assert.ok(create.body.code.endsWith('D'), `Expected code ending in D, got ${create.body.code}`);
+  assert.equal(create.body.client_id, sena.id);
+
+  // Verify it round-trips in the list
+  const list = await requestJson('/api/isci', { headers: { Cookie: adminCookie } });
+  assert.equal(list.response.status, 200);
+  assert.ok(list.body.some((i) => i.id === create.body.id && i.media_type === 'D'));
+});
+
+test('role change takes effect on the next request without re-login', async () => {
+  const adminLogin = await requestJson('/auth/login', {
+    method: 'POST',
+    body: { username: 'admin', password: 'Password123!' },
+  });
+  const adminCookie = getCookie(adminLogin.response);
+
+  const createEditor = await requestJson('/api/users', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: { username: 'editor_demote_test', password: 'Password123!', role: 'editor' },
+  });
+  assert.equal(createEditor.response.status, 200);
+  const editorId = createEditor.body.id;
+
+  const editorLogin = await requestJson('/auth/login', {
+    method: 'POST',
+    body: { username: 'editor_demote_test', password: 'Password123!' },
+  });
+  assert.equal(editorLogin.response.status, 200);
+  const editorCookie = getCookie(editorLogin.response);
+
+  const clients = await requestJson('/api/clients', { headers: { Cookie: editorCookie } });
+  const sena = clients.body.find((c) => c.code === 'SENA');
+
+  // Editor can write before demotion
+  const beforeDemotion = await requestJson('/api/isci', {
+    method: 'POST',
+    headers: { Cookie: editorCookie },
+    body: { client_id: sena.id, media_type: 'H', description: 'before demotion' },
+  });
+  assert.equal(beforeDemotion.response.status, 200);
+
+  // Admin demotes editor to viewer
+  const demote = await requestJson(`/api/users/${editorId}`, {
+    method: 'PUT',
+    headers: { Cookie: adminCookie },
+    body: { username: 'editor_demote_test', role: 'viewer', active: 1 },
+  });
+  assert.equal(demote.response.status, 200);
+  assert.equal(demote.body.role, 'viewer');
+
+  // Same session — write should now be refused without re-login
+  const afterDemotion = await requestJson('/api/isci', {
+    method: 'POST',
+    headers: { Cookie: editorCookie },
+    body: { client_id: sena.id, media_type: 'H', description: 'after demotion' },
+  });
+  assert.equal(afterDemotion.response.status, 403);
+});
+
+test('client parent update is rejected when it would create a circular hierarchy', async () => {
+  const login = await requestJson('/auth/login', {
+    method: 'POST',
+    body: { username: 'admin', password: 'Password123!' },
+  });
+  const adminCookie = getCookie(login.response);
+
+  const parent = await requestJson('/api/clients', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Cycle Root', code: 'CYCRT', isci_code: 'CR' },
+  });
+  assert.equal(parent.response.status, 200);
+
+  const child = await requestJson('/api/clients', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Cycle Child', code: 'CYCCH', isci_code: 'CC', parent_id: parent.body.id },
+  });
+  assert.equal(child.response.status, 200);
+
+  const grandchild = await requestJson('/api/clients', {
+    method: 'POST',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Cycle Grandchild', code: 'CYCGC', isci_code: 'CG', parent_id: child.body.id },
+  });
+  assert.equal(grandchild.response.status, 200);
+
+  // Multi-node cycle: root → grandchild would form root→child→grandchild→root
+  const multiCycle = await requestJson(`/api/clients/${parent.body.id}`, {
+    method: 'PUT',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Cycle Root', code: 'CYCRT', isci_code: 'CR', active: 1, parent_id: grandchild.body.id },
+  });
+  assert.equal(multiCycle.response.status, 400);
+  assert.ok(multiCycle.body.error.toLowerCase().includes('circular'));
+
+  // Self-reference is also rejected
+  const selfCycle = await requestJson(`/api/clients/${parent.body.id}`, {
+    method: 'PUT',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Cycle Root', code: 'CYCRT', isci_code: 'CR', active: 1, parent_id: parent.body.id },
+  });
+  assert.equal(selfCycle.response.status, 400);
+
+  // Valid re-parent still works (child → parent is fine since grandchild → child stays intact)
+  const validReparent = await requestJson(`/api/clients/${grandchild.body.id}`, {
+    method: 'PUT',
+    headers: { Cookie: adminCookie },
+    body: { name: 'Cycle Grandchild', code: 'CYCGC', isci_code: 'CG', active: 1, parent_id: parent.body.id },
+  });
+  assert.equal(validReparent.response.status, 200);
+});
+
 test('client job filters include descendant clients when a parent client is selected', async () => {
   const login = await requestJson('/auth/login', {
     method: 'POST',
