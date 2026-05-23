@@ -806,6 +806,10 @@ tr.job-status-archived td  { opacity: 0.4; }
 
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
+  /* Hide Folder column (4th) on mobile */
+  #jobs-table th:nth-child(4),
+  #jobs-table td:nth-child(4) { display: none !important; }
+
   /* Horizontal scroll — all columns visible, sized to content */
   table {
     table-layout: auto !important;
