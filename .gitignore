@@ -1,4 +1,5 @@
 node_modules/
+folder-helper/dist/
 .env
 .env.docker
 jobs.db

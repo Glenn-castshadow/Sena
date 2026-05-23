@@ -4,6 +4,7 @@ const db = require('../database');
 const {
   createFolderAtPath,
   getSetting,
+  getSubfolders,
   makeJobFolderName,
   openFolderPicker,
   recreateFolderAtPath,
@@ -201,6 +202,27 @@ router.post('/:id/pick-and-create', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+});
+
+// Returns info the local helper needs to pick + create a folder on the client machine
+router.get('/:id/folder-info', (req, res) => {
+  const job = getJobById(db, req.params.id);
+  if (!job) return res.status(404).json({ error: 'Not found' });
+  res.json({
+    job_number: job.job_number,
+    default_path: getSetting(db, 'jobs_root') || '',
+    subfolders: getSubfolders(db),
+  });
+});
+
+// Called by the frontend after the local helper has created the folder
+router.post('/:id/set-folder-path', (req, res) => {
+  const { folder_path } = req.body;
+  if (!folder_path) return res.status(400).json({ error: 'folder_path is required' });
+  const job = getJobById(db, req.params.id);
+  if (!job) return res.status(404).json({ error: 'Not found' });
+  updateJobFolder(db, job.id, folder_path);
+  res.json({ ok: true, folder_path });
 });
 
 router.post('/:id/recreate-folder', (req, res) => {

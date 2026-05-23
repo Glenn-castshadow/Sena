@@ -6,6 +6,7 @@ let clients = [];
 let settings = {};
 let currentUser = null;
 let notesTarget = null;
+let helperAvailable = false;
 let jobCache = {};   // id → job row data
 let isciCache = {};  // id → isci row data
 
@@ -645,12 +646,33 @@ async function pickAndCreateFolder(id) {
   const btn = document.getElementById(`folder-btn-${id}`);
   if (btn) { btn.textContent = '⏳ Opening…'; btn.disabled = true; }
   try {
-    const res = await api(`/api/jobs/${id}/pick-and-create`, { method: 'POST' });
-    if (res?.cancelled) {
-      if (btn) { btn.textContent = '📁 Create Folder'; btn.disabled = false; }
-      return;
+    if (helperAvailable) {
+      const info = await api(`/api/jobs/${id}/folder-info`);
+      const label = encodeURIComponent(`Select parent folder for: ${info.job_number}`);
+      const def   = encodeURIComponent(info.default_path || '');
+      const picked = await fetch(`http://localhost:3700/pick-folder?label=${label}&default=${def}`,
+        { signal: AbortSignal.timeout(65000) }).then(r => r.json());
+      if (!picked?.path) {
+        if (btn) { btn.textContent = '📁 Create Folder'; btn.disabled = false; }
+        return;
+      }
+      const created = await fetch('http://localhost:3700/create-folder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ parentPath: picked.path, folderName: info.job_number, subfolders: info.subfolders }),
+        signal: AbortSignal.timeout(10000),
+      }).then(r => r.json());
+      if (!created?.ok) throw new Error(created?.error || 'Folder creation failed');
+      await api(`/api/jobs/${id}/set-folder-path`, { method: 'POST', body: { folder_path: created.path } });
+      await loadJobs();
+    } else {
+      const res = await api(`/api/jobs/${id}/pick-and-create`, { method: 'POST' });
+      if (res?.cancelled) {
+        if (btn) { btn.textContent = '📁 Create Folder'; btn.disabled = false; }
+        return;
+      }
+      if (res?.ok) await loadJobs();
     }
-    if (res?.ok) await loadJobs();
   } catch(err) {
     alert('Folder creation failed: ' + err.message);
     if (btn) { btn.textContent = '📁 Create Folder'; btn.disabled = false; }
@@ -1077,10 +1099,19 @@ async function pickFolder() {
   btn.textContent = 'Opening…';
   btn.disabled = true;
   try {
-    const res = await api('/api/settings/pick-folder');
-    if (res && res.path) {
-      document.getElementById('setting-jobs-root').value = res.path;
-      note.innerHTML = `<strong>Selected:</strong> ${escHtml(res.path)} — click Save Settings to apply.`;
+    let selectedPath = null;
+    if (helperAvailable) {
+      const current = encodeURIComponent(document.getElementById('setting-jobs-root').value.trim());
+      const res = await fetch(`http://localhost:3700/pick-folder?label=${encodeURIComponent('Select Jobs Root Folder')}&default=${current}`,
+        { signal: AbortSignal.timeout(65000) }).then(r => r.json());
+      selectedPath = res?.path || null;
+    } else {
+      const res = await api('/api/settings/pick-folder');
+      selectedPath = res?.path || null;
+    }
+    if (selectedPath) {
+      document.getElementById('setting-jobs-root').value = selectedPath;
+      note.innerHTML = `<strong>Selected:</strong> ${escHtml(selectedPath)} — click Save Settings to apply.`;
     } else {
       note.innerHTML = `<strong>No folder selected</strong> — type the path manually if running remotely.`;
     }
@@ -1112,8 +1143,17 @@ async function pickTemplateFolder() {
   btn.textContent = 'Opening…';
   btn.disabled = true;
   try {
-    const res = await api('/api/settings/pick-template');
-    if (res?.path) document.getElementById('setting-template-folder').value = res.path;
+    let selectedPath = null;
+    if (helperAvailable) {
+      const current = encodeURIComponent(document.getElementById('setting-template-folder').value.trim());
+      const res = await fetch(`http://localhost:3700/pick-folder?label=${encodeURIComponent('Select Job Template Folder')}&default=${current}`,
+        { signal: AbortSignal.timeout(65000) }).then(r => r.json());
+      selectedPath = res?.path || null;
+    } else {
+      const res = await api('/api/settings/pick-template');
+      selectedPath = res?.path || null;
+    }
+    if (selectedPath) document.getElementById('setting-template-folder').value = selectedPath;
   } finally {
     btn.textContent = 'Browse…';
     btn.disabled = false;
@@ -1296,6 +1336,13 @@ async function logout() {
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
+async function detectHelper() {
+  try {
+    const res = await fetch('http://localhost:3700/ping', { signal: AbortSignal.timeout(500) });
+    if (res.ok) helperAvailable = true;
+  } catch {}
+}
+
 async function init() {
   try {
     currentUser = await fetch(BASE + '/auth/me').then(r => r.json());
@@ -1305,6 +1352,7 @@ async function init() {
   } catch {}
 
   applyRoleUI();
+  await detectHelper();
   await loadSettings();
   await fetchClients();
   await populateCreatorFilters();

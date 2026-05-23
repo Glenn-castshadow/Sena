@@ -50,7 +50,7 @@ function createApp() {
     name: 'sena.sid',
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.COOKIE_SECURE === 'true',
       sameSite: 'lax',
       maxAge: 8 * 60 * 60 * 1000,
     },
@@ -65,6 +65,40 @@ function createApp() {
 
   // Static assets needed by login page (no auth)
   app.use('/login.css', express.static(path.join(__dirname, 'public', 'login.css')));
+
+  // Helper download — no auth required so users can grab it before logging in
+  const HELPER_EXE = path.join(__dirname, 'folder-helper', 'dist', 'SenaFolderHelper.exe');
+  app.get('/helper', (req, res) => {
+    const built = fs.existsSync(HELPER_EXE);
+    res.type('html').send(`<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Sena Folder Helper</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 560px; margin: 60px auto; padding: 0 20px; color: #1a1a2e; }
+  h1 { font-size: 1.4rem; margin-bottom: .25rem; }
+  p { line-height: 1.6; color: #444; }
+  .btn { display: inline-block; margin-top: 1rem; padding: .6rem 1.4rem; background: #2563eb; color: #fff; border-radius: 6px; text-decoration: none; font-weight: 600; }
+  .btn:hover { background: #1d4ed8; }
+  .warn { background: #fef9c3; border: 1px solid #fde047; border-radius: 6px; padding: .75rem 1rem; margin-top: 1rem; font-size: .9rem; }
+  .note { font-size: .85rem; color: #666; margin-top: 1rem; }
+</style></head><body>
+<h1>Sena Folder Helper</h1>
+<p>This small app runs in the background on <strong>your Windows PC</strong> and lets the Job Tracker open native folder dialogs on your screen instead of on the server.</p>
+<p><strong>Run it once per session</strong> — just double-click and keep the window open while you work.</p>
+${built
+  ? `<a class="btn" href="${BASE_PATH}/helper/download">Download SenaFolderHelper.exe</a>
+<p class="note">No installation required. Requires Windows 10/11.</p>`
+  : `<div class="warn">The helper hasn't been built yet. Run <code>folder-helper/build.bat</code> on the server first.</div>`}
+<p class="note"><a href="${BASE_PATH}/">← Back to Job Tracker</a></p>
+</body></html>`);
+  });
+
+  app.get('/helper/download', (req, res) => {
+    if (!fs.existsSync(HELPER_EXE)) {
+      return res.status(404).send('Helper exe not built yet. Run folder-helper/build.bat on the server.');
+    }
+    res.download(HELPER_EXE, 'SenaFolderHelper.exe');
+  });
 
   app.use('/api', requireAuth);
   app.use('/api/settings', guardWrites, require('./routes/settings'));
