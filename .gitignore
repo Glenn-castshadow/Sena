@@ -5,3 +5,4 @@ jobs.db
 *.db-shm
 *.db-wal
 .claude/settings.local.json
+docker-compose.override.yml
