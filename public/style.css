@@ -762,7 +762,8 @@ tr.job-status-archived td  { opacity: 0.4; }
 }
 
 @media (max-width: 767px) {
-  body { overflow-x: hidden; }
+  /* Allow the whole page to scroll naturally on mobile */
+  html, body { height: auto; overflow-x: hidden; overflow-y: auto; }
 
   .mobile-menu-btn { display: flex; align-items: center; justify-content: center; }
 
@@ -773,16 +774,17 @@ tr.job-status-archived td  { opacity: 0.4; }
     transform: translateX(-100%);
     transition: transform 0.25s ease;
     width: 240px;
+    overflow-y: auto;
   }
   .sidebar.open { transform: translateX(0); }
   .sidebar-overlay.open { display: block; }
 
-  #app { display: block; }
+  #app { display: block; height: auto; overflow: visible; }
 
   .content {
-    padding: 56px 12px 20px; /* top pad for hamburger button */
-    overflow-y: auto;
-    min-height: 100vh;
+    padding: 56px 12px 20px;
+    overflow: visible;
+    height: auto;
   }
 
   .page-header {
