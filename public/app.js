@@ -129,6 +129,16 @@ function initResizableCols(tableEl) {
   });
 }
 
+// ── Mobile sidebar ─────────────────────────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+
 // ── Navigation ─────────────────────────────────────────────────────────────
 document.querySelectorAll('.nav-links a').forEach(a => {
   a.addEventListener('click', e => {
@@ -138,6 +148,7 @@ document.querySelectorAll('.nav-links a').forEach(a => {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     a.classList.add('active');
     document.getElementById('page-' + page).classList.add('active');
+    closeSidebar(); // close on mobile after nav
     if (page === 'jobs') loadJobs().then(() => initResizableCols(document.getElementById('jobs-table')));
     if (page === 'isci') loadIsci().then(() => initResizableCols(document.getElementById('isci-table')));
     if (page === 'clients') loadClients().then(() => initResizableCols(document.querySelector('#page-clients table')));
