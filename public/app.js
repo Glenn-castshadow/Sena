@@ -85,17 +85,19 @@ function initResizableCols(tableEl) {
   if (!tableEl || tableEl.dataset.resizable) return;
   tableEl.dataset.resizable = '1';
 
+  const isMobile = window.innerWidth <= 767;
   const ths = [...tableEl.querySelectorAll('thead th')];
   const defaults = COL_DEFAULTS[tableEl.id];
 
-  ths.forEach((th, i) => {
-    // Use saved defaults if available, otherwise lock the natural width
-    th.style.width = (defaults && defaults[i] ? defaults[i] : th.offsetWidth) + 'px';
-  });
-
-  tableEl.style.tableLayout = 'fixed';
-  // Let table be only as wide as its columns — no centering or stretching
-  tableEl.style.width = 'auto';
+  if (!isMobile) {
+    // Desktop: lock column widths and use fixed layout for resizing
+    ths.forEach((th, i) => {
+      th.style.width = (defaults && defaults[i] ? defaults[i] : th.offsetWidth) + 'px';
+    });
+    tableEl.style.tableLayout = 'fixed';
+    tableEl.style.width = 'auto';
+  }
+  // Mobile: CSS handles auto layout — no inline widths set
 
   ths.forEach((th, i) => {
     // No handle on the last column — nothing to resize into

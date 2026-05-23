@@ -806,7 +806,32 @@ tr.job-status-archived td  { opacity: 0.4; }
 
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-  table { min-width: 600px; }
+  /* Mobile table: 4 focused columns, full-width, no truncation */
+  table {
+    table-layout: fixed !important;
+    width: 100% !important;
+  }
+  thead th, tbody td {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: none !important;
+  }
+
+  /* Jobs table mobile: Job Number | Description | Status | Details */
+  #jobs-table th:nth-child(1), #jobs-table td:nth-child(1) { width: 22% !important; }
+  #jobs-table th:nth-child(3), #jobs-table td:nth-child(3) { width: 38% !important; }
+  #jobs-table th:nth-child(6), #jobs-table td:nth-child(6) { width: 22% !important; }
+  #jobs-table th:nth-child(7), #jobs-table td:nth-child(7) { width: 18% !important; }
+
+  /* Hide Client, Folder, Created on mobile */
+  #jobs-table th:nth-child(2), #jobs-table td:nth-child(2),
+  #jobs-table th:nth-child(4), #jobs-table td:nth-child(4),
+  #jobs-table th:nth-child(5), #jobs-table td:nth-child(5) { display: none !important; }
+
+  /* ISCI table mobile: Code | Type | Description | Status | Details */
+  #isci-table th:nth-child(5), #isci-table td:nth-child(5),
+  #isci-table th:nth-child(6), #isci-table td:nth-child(6) { display: none !important; }
 
   .modal { padding: 20px 16px; margin: 8px; width: calc(100% - 16px); max-width: none; }
 
