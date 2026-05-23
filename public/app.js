@@ -563,7 +563,7 @@ async function loadJobs() {
 
     return `
     <tr class="job-status-${j.status}" id="job-row-${j.id}">
-      <td><span class="job-number" title="${escHtml(j.job_number)}">${j.serial}${escHtml(j.client_code)}</span></td>
+      <td><span class="job-number isci-copyable" title="Click to copy: ${escHtml(j.job_number)}" onclick="copyJobNumber(this,'${escHtml(j.job_number)}')">${j.serial}${escHtml(j.client_code)}</span></td>
       <td>${escHtml(j.client_name)}</td>
       <td>${escHtml(j.description)}</td>
       <td class="folder-cell">${folderCell}</td>
@@ -714,6 +714,18 @@ async function submitNewIsci(e) {
     document.getElementById('ni-duplicate-warning')?.classList.add('hidden');
     await loadIsci();
   } catch(err) { alert('Error: ' + err.message); }
+}
+
+function copyJobNumber(el, fullNumber) {
+  navigator.clipboard.writeText(fullNumber).then(() => {
+    const orig = el.textContent;
+    el.textContent = 'Copied!';
+    el.classList.add('isci-copied');
+    setTimeout(() => {
+      el.textContent = orig;
+      el.classList.remove('isci-copied');
+    }, 1500);
+  });
 }
 
 function copyIsci(el, code) {
