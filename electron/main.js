@@ -75,10 +75,12 @@ ipcMain.handle('create-folder', async (_event, { parentPath, folderName, subfold
   return target;
 });
 
+const DEFAULT_NGROK_URL = 'https://deluxe-clasp-rosy.ngrok-free.dev';
+
 ipcMain.handle('get-server-info', () => ({
   defaultUrl: DEFAULT_URL,
   currentUrl: getAppUrl(),
-  ngrokUrl:   readConfig().ngrokUrl || '',
+  ngrokUrl:   readConfig().ngrokUrl || DEFAULT_NGROK_URL,
 }));
 
 ipcMain.handle('set-server-url', (_event, url) => {
