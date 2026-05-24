@@ -80,6 +80,7 @@
       });
       const data = await res.json();
       if (res.ok) {
+        if (data.sessionId) localStorage.setItem('sena-session-token', data.sessionId);
         window.location.href = BASE + '/';
       } else {
         errEl.textContent = data.error;
@@ -107,11 +108,13 @@
       const data = await res.json();
       if (res.ok) {
         // Auto-login after setup
-        await fetch(BASE + '/auth/login', {
+        const loginRes = await fetch(BASE + '/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password }),
         });
+        const loginData = await loginRes.json();
+        if (loginData.sessionId) localStorage.setItem('sena-session-token', loginData.sessionId);
         window.location.href = BASE + '/';
       } else {
         errEl.textContent = data.error;

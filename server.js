@@ -107,8 +107,10 @@ ${built
   app.use('/api/isci', guardWrites, require('./routes/isci'));
   app.use('/api/users', requireAdmin, require('./routes/users'));
 
-  app.use(requireAuth, express.static(path.join(__dirname, 'public')));
-  app.get('/{*splat}', requireAuth, serveHtml('index.html'));
+  // Static files (HTML/JS/CSS) are public — all sensitive data is behind /api requireAuth.
+  // This is necessary for the Tauri iframe shell, where SameSite=Lax cookies are blocked.
+  app.use(express.static(path.join(__dirname, 'public')));
+  app.get('/{*splat}', serveHtml('index.html'));
 
   return app;
 }

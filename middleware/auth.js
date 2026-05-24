@@ -1,6 +1,27 @@
 const { BASE_PATH } = require('../config');
 
 function requireAuth(req, res, next) {
+  // X-Session-Id: Tauri desktop client workaround — SameSite=Lax cookies are
+  // blocked in cross-site iframes (tauri://localhost shell + http:// app frame).
+  const tokenSid = req.headers['x-session-id'];
+  if (tokenSid) {
+    req.sessionStore.get(tokenSid, (err, sessionData) => {
+      if (err || !sessionData || !sessionData.userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      const db = require('../database');
+      const user = db.prepare('SELECT active, role FROM users WHERE id = ?').get(sessionData.userId);
+      if (!user || !user.active) {
+        return res.status(401).json({ error: 'Account inactive' });
+      }
+      req.session.userId = sessionData.userId;
+      req.session.username = sessionData.username;
+      req.session.role = user.role;
+      return next();
+    });
+    return;
+  }
+
   if (req.session && req.session.userId) {
     // Reject inactive users on every request
     const db = require('../database');

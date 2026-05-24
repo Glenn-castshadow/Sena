@@ -51,12 +51,24 @@ let isciCache = {};  // id → isci row data
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 async function api(path, opts = {}) {
+  const sessionToken = localStorage.getItem('sena-session-token');
+  const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    ...(opts.headers || {}),
+  };
+  if (sessionToken) headers['x-session-id'] = sessionToken;
+  const { headers: _h, ...restOpts } = opts;
   const res = await fetch(API + path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
+    headers,
+    ...restOpts,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
-  if (res.status === 401) { window.location.href = BASE + '/login'; return; }
+  if (res.status === 401) {
+    localStorage.removeItem('sena-session-token');
+    window.location.href = BASE + '/login';
+    return;
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || res.statusText);
@@ -1405,6 +1417,7 @@ async function archiveRecords() {
 
 // ── Auth ───────────────────────────────────────────────────────────────────
 async function logout() {
+  localStorage.removeItem('sena-session-token');
   await fetch(BASE + '/auth/logout', { method: 'POST' });
   window.location.href = BASE + '/login';
 }
@@ -1444,7 +1457,16 @@ async function helperCreateFolder(parentPath, folderName, subfolders) {
 
 async function init() {
   try {
-    currentUser = await fetch(BASE + '/auth/me').then(r => r.json());
+    const sessionToken = localStorage.getItem('sena-session-token');
+    const meHeaders = { Accept: 'application/json' };
+    if (sessionToken) meHeaders['x-session-id'] = sessionToken;
+    const meRes = await fetch(BASE + '/auth/me', { headers: meHeaders });
+    if (meRes.status === 401) {
+      localStorage.removeItem('sena-session-token');
+      window.location.href = BASE + '/login';
+      return;
+    }
+    currentUser = await meRes.json();
     if (currentUser.username) {
       document.getElementById('nav-username').textContent = currentUser.username;
     }
@@ -1457,8 +1479,8 @@ async function init() {
   await populateCreatorFilters();
 
   try {
-    const prefs = await fetch(BASE + '/auth/preferences').then(r => r.json());
-    applyStatusPrefs(prefs);
+    const prefs = await api('/auth/preferences');
+    if (prefs) applyStatusPrefs(prefs);
   } catch {}
 
   await loadJobs();

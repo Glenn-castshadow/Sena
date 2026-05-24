@@ -29,16 +29,32 @@ router.post('/login', async (req, res) => {
   req.session.userId = user.id;
   req.session.username = user.username;
   req.session.role = user.role;
-  res.json({ ok: true });
+  res.json({ ok: true, sessionId: req.session.id });
 });
 
 router.post('/logout', (req, res) => {
-  req.session.destroy(() => res.json({ ok: true }));
+  const tokenSid = req.headers['x-session-id'];
+  if (tokenSid) {
+    req.sessionStore.destroy(tokenSid, () => res.json({ ok: true }));
+  } else {
+    req.session.destroy(() => res.json({ ok: true }));
+  }
 });
 
+// Resolves userId from session cookie or X-Session-Id header (Tauri desktop)
+function resolveSession(req, cb) {
+  const tokenSid = req.headers['x-session-id'];
+  if (tokenSid) {
+    return req.sessionStore.get(tokenSid, (err, s) => cb(err, s || null));
+  }
+  cb(null, req.session.userId ? req.session : null);
+}
+
 router.get('/me', (req, res) => {
-  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
-  res.json({ id: req.session.userId, username: req.session.username, role: req.session.role });
+  resolveSession(req, (err, session) => {
+    if (err || !session?.userId) return res.status(401).json({ error: 'Not authenticated' });
+    res.json({ id: session.userId, username: session.username, role: session.role });
+  });
 });
 
 // First-run setup — only works when zero users exist
@@ -62,21 +78,25 @@ router.get('/setup-needed', (req, res) => {
 });
 
 router.get('/preferences', (req, res) => {
-  if (!req.session.userId) return res.status(401).json({});
-  const user = db.prepare('SELECT preferences FROM users WHERE id = ?').get(req.session.userId);
-  try { res.json(JSON.parse(user?.preferences || '{}')); }
-  catch { res.json({}); }
+  resolveSession(req, (err, session) => {
+    if (err || !session?.userId) return res.status(401).json({});
+    const user = db.prepare('SELECT preferences FROM users WHERE id = ?').get(session.userId);
+    try { res.json(JSON.parse(user?.preferences || '{}')); }
+    catch { res.json({}); }
+  });
 });
 
 router.patch('/preferences', (req, res) => {
-  if (!req.session.userId) return res.status(401).json({});
-  const user = db.prepare('SELECT preferences FROM users WHERE id = ?').get(req.session.userId);
-  let current = {};
-  try { current = JSON.parse(user?.preferences || '{}'); } catch {}
-  const updated = { ...current, ...req.body };
-  db.prepare('UPDATE users SET preferences = ? WHERE id = ?')
-    .run(JSON.stringify(updated), req.session.userId);
-  res.json(updated);
+  resolveSession(req, (err, session) => {
+    if (err || !session?.userId) return res.status(401).json({});
+    const user = db.prepare('SELECT preferences FROM users WHERE id = ?').get(session.userId);
+    let current = {};
+    try { current = JSON.parse(user?.preferences || '{}'); } catch {}
+    const updated = { ...current, ...req.body };
+    db.prepare('UPDATE users SET preferences = ? WHERE id = ?')
+      .run(JSON.stringify(updated), session.userId);
+    res.json(updated);
+  });
 });
 
 module.exports = router;
