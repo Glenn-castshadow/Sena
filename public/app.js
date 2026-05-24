@@ -1140,13 +1140,41 @@ async function loadSettings() {
 
 async function toggleServerUrl() {
   const btn = document.getElementById('btn-server-connect');
-  if (btn.dataset.onNgrok) {
-    await window.electronAPI.setServerUrl(btn.dataset.defaultUrl);
-  } else {
-    const url = document.getElementById('setting-server-url').value.trim();
-    if (!url) return;
-    await window.electronAPI.setServerUrl(url);
+  const targetUrl = btn.dataset.onNgrok
+    ? btn.dataset.defaultUrl
+    : document.getElementById('setting-server-url').value.trim();
+
+  if (!targetUrl) return;
+  if (!isAllowedDesktopServerUrl(targetUrl)) {
+    alert('Enter the office server URL, localhost:3000, or an ngrok-free.dev URL.');
+    return;
   }
+
+  btn.disabled = true;
+  btn.textContent = btn.dataset.onNgrok ? 'Disconnecting...' : 'Connecting...';
+  try {
+    if (window.electronAPI?.setServerUrl) {
+      await Promise.race([
+        window.electronAPI.setServerUrl(targetUrl),
+        new Promise(resolve => setTimeout(resolve, 750)),
+      ]);
+    }
+  } catch (err) {
+    console.warn('Desktop server URL save failed; navigating anyway:', err);
+  }
+  window.location.replace(targetUrl);
+}
+
+function isAllowedDesktopServerUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    const port = parsed.port || (parsed.protocol === 'https:' ? '443' : '80');
+    if (parsed.protocol === 'http:' && host === '10.0.7.62' && port === '3000') return true;
+    if (parsed.protocol === 'http:' && (host === 'localhost' || host === '127.0.0.1') && port === '3000') return true;
+    if (parsed.protocol === 'https:' && host.endsWith('.ngrok-free.dev')) return true;
+  } catch {}
+  return false;
 }
 
 async function pickFolder() {
