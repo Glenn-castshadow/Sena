@@ -646,7 +646,7 @@ async function pickAndCreateFolder(id) {
   const btn = document.getElementById(`folder-btn-${id}`);
   if (btn) { btn.textContent = '⏳ Opening…'; btn.disabled = true; }
   try {
-    if (helperAvailable) {
+    if (await pingHelper()) {
       const info = await api(`/api/jobs/${id}/folder-info`);
       const label = encodeURIComponent(`Select parent folder for: ${info.job_number}`);
       const def   = encodeURIComponent(info.default_path || '');
@@ -666,12 +666,8 @@ async function pickAndCreateFolder(id) {
       await api(`/api/jobs/${id}/set-folder-path`, { method: 'POST', body: { folder_path: created.path } });
       await loadJobs();
     } else {
-      const res = await api(`/api/jobs/${id}/pick-and-create`, { method: 'POST' });
-      if (res?.cancelled) {
-        if (btn) { btn.textContent = '📁 Create Folder'; btn.disabled = false; }
-        return;
-      }
-      if (res?.ok) await loadJobs();
+      alert('Folder Helper not running — download it from /helper and keep it open to create folders.');
+      if (btn) { btn.textContent = '📁 Create Folder'; btn.disabled = false; }
     }
   } catch(err) {
     alert('Folder creation failed: ' + err.message);
@@ -1099,21 +1095,19 @@ async function pickFolder() {
   btn.textContent = 'Opening…';
   btn.disabled = true;
   try {
-    let selectedPath = null;
-    if (helperAvailable) {
-      const current = encodeURIComponent(document.getElementById('setting-jobs-root').value.trim());
-      const res = await fetch(`http://localhost:3700/pick-folder?label=${encodeURIComponent('Select Jobs Root Folder')}&default=${current}`,
-        { signal: AbortSignal.timeout(65000) }).then(r => r.json());
-      selectedPath = res?.path || null;
-    } else {
-      const res = await api('/api/settings/pick-folder');
-      selectedPath = res?.path || null;
+    if (!await pingHelper()) {
+      note.innerHTML = `<strong>Folder Helper not running</strong> — <a href="/helper" target="_blank">download it</a> and keep it open, or type the path manually.`;
+      return;
     }
+    const current = encodeURIComponent(document.getElementById('setting-jobs-root').value.trim());
+    const res = await fetch(`http://localhost:3700/pick-folder?label=${encodeURIComponent('Select Jobs Root Folder')}&default=${current}`,
+      { signal: AbortSignal.timeout(65000) }).then(r => r.json());
+    const selectedPath = res?.path || null;
     if (selectedPath) {
       document.getElementById('setting-jobs-root').value = selectedPath;
       note.innerHTML = `<strong>Selected:</strong> ${escHtml(selectedPath)} — click Save Settings to apply.`;
     } else {
-      note.innerHTML = `<strong>No folder selected</strong> — type the path manually if running remotely.`;
+      note.innerHTML = `<strong>No folder selected.</strong>`;
     }
   } catch {
     note.innerHTML = `<strong>Folder picker unavailable</strong> — type the path manually.`;
@@ -1143,16 +1137,14 @@ async function pickTemplateFolder() {
   btn.textContent = 'Opening…';
   btn.disabled = true;
   try {
-    let selectedPath = null;
-    if (helperAvailable) {
-      const current = encodeURIComponent(document.getElementById('setting-template-folder').value.trim());
-      const res = await fetch(`http://localhost:3700/pick-folder?label=${encodeURIComponent('Select Job Template Folder')}&default=${current}`,
-        { signal: AbortSignal.timeout(65000) }).then(r => r.json());
-      selectedPath = res?.path || null;
-    } else {
-      const res = await api('/api/settings/pick-template');
-      selectedPath = res?.path || null;
+    if (!await pingHelper()) {
+      alert('Folder Helper not running — download it from /helper and keep it open, or type the path manually.');
+      return;
     }
+    const current = encodeURIComponent(document.getElementById('setting-template-folder').value.trim());
+    const res = await fetch(`http://localhost:3700/pick-folder?label=${encodeURIComponent('Select Job Template Folder')}&default=${current}`,
+      { signal: AbortSignal.timeout(65000) }).then(r => r.json());
+    const selectedPath = res?.path || null;
     if (selectedPath) document.getElementById('setting-template-folder').value = selectedPath;
   } finally {
     btn.textContent = 'Browse…';
@@ -1336,11 +1328,12 @@ async function logout() {
 }
 
 // ── Init ───────────────────────────────────────────────────────────────────
-async function detectHelper() {
+async function pingHelper() {
   try {
-    const res = await fetch('http://localhost:3700/ping', { signal: AbortSignal.timeout(500) });
-    if (res.ok) helperAvailable = true;
-  } catch {}
+    const res = await fetch('http://localhost:3700/ping', { signal: AbortSignal.timeout(1500) });
+    helperAvailable = res.ok;
+  } catch { helperAvailable = false; }
+  return helperAvailable;
 }
 
 async function init() {
@@ -1352,7 +1345,7 @@ async function init() {
   } catch {}
 
   applyRoleUI();
-  await detectHelper();
+  await pingHelper();
   await loadSettings();
   await fetchClients();
   await populateCreatorFilters();
