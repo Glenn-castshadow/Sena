@@ -3,7 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 use tauri::{command, Manager, WebviewUrl, WebviewWindowBuilder};
 
-const DEFAULT_URL: &str = "http://10.0.7.62:3000";
+const LAN_URL: &str = "http://10.0.7.62:3000";
 const DEFAULT_NGROK_URL: &str = "https://deluxe-clasp-rosy.ngrok-free.dev";
 
 #[derive(Serialize, Deserialize, Default, Clone)]
@@ -13,12 +13,12 @@ struct Config {
     ngrok_url: Option<String>,
 }
 
-// Store config next to the exe (matches Electron behaviour)
 fn config_path() -> PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|d| d.join("sena-tracker.json")))
-        .unwrap_or_else(|| PathBuf::from("sena-tracker.json"))
+    let dir = dirs::data_local_dir()
+        .unwrap_or_else(std::env::temp_dir)
+        .join("SenaJobTracker");
+    let _ = fs::create_dir_all(&dir);
+    dir.join("sena-tracker.json")
 }
 
 fn read_config() -> Config {
@@ -44,7 +44,7 @@ fn get_url() -> String {
 // never needs a round-trip IPC call (avoids timing / capability issues).
 // pickFolder / createFolder are only exposed when Tauri invoke is reachable.
 fn build_shim(current_url: &str, ngrok_url: &str) -> String {
-    let default_js  = serde_json::to_string(DEFAULT_URL).unwrap_or_default();
+    let default_js  = serde_json::to_string(LAN_URL).unwrap_or_default();
     let current_js  = serde_json::to_string(current_url).unwrap_or_default();
     let ngrok_js    = serde_json::to_string(ngrok_url).unwrap_or_default();
     format!(r#"
@@ -80,8 +80,8 @@ fn build_shim(current_url: &str, ngrok_url: &str) -> String {
 fn get_server_info() -> serde_json::Value {
     let cfg = read_config();
     serde_json::json!({
-        "defaultUrl":  DEFAULT_URL,
-        "currentUrl":  cfg.url.as_deref().unwrap_or(DEFAULT_URL),
+        "defaultUrl":  LAN_URL,
+        "currentUrl":  cfg.url.as_deref().unwrap_or(LAN_URL),
         "ngrokUrl":    cfg.ngrok_url.as_deref().unwrap_or(DEFAULT_NGROK_URL),
     })
 }
@@ -89,7 +89,7 @@ fn get_server_info() -> serde_json::Value {
 #[command]
 fn set_server_url(app: tauri::AppHandle, url: String) {
     let mut cfg = read_config();
-    if url != DEFAULT_URL {
+    if url != LAN_URL {
         cfg.ngrok_url = Some(url.clone());
     }
     cfg.url = Some(url.clone());
@@ -115,12 +115,28 @@ fn pick_folder(label: Option<String>, default_path: Option<String>, app: tauri::
     builder.blocking_pick_folder().map(|fp| fp.to_string())
 }
 
+fn is_safe_name(s: &str) -> bool {
+    !s.is_empty()
+        && !s.contains("..")
+        && !s.contains('/')
+        && !s.contains('\\')
+        && !s.contains('\0')
+}
+
 #[command]
 fn create_folder(
     parent_path: String,
     folder_name: String,
     subfolders: Vec<String>,
 ) -> Result<String, String> {
+    if !is_safe_name(&folder_name) {
+        return Err(format!("Invalid folder name: {folder_name}"));
+    }
+    for sub in &subfolders {
+        if !is_safe_name(sub) {
+            return Err(format!("Invalid subfolder name: {sub}"));
+        }
+    }
     let target = PathBuf::from(&parent_path).join(&folder_name);
     fs::create_dir_all(&target).map_err(|e| e.to_string())?;
     for sub in &subfolders {

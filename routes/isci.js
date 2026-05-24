@@ -17,8 +17,11 @@ function buildCode(prefix, year, serial, media_type) {
 
 // Walk up parent chain; return root client
 function getRootClient(clientId) {
+  const seen = new Set();
   let c = db.prepare('SELECT id, code, parent_id FROM clients WHERE id = ?').get(clientId);
   while (c && c.parent_id) {
+    if (seen.has(c.id)) break;
+    seen.add(c.id);
     c = db.prepare('SELECT id, code, parent_id FROM clients WHERE id = ?').get(c.parent_id);
   }
   return c;
