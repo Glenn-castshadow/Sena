@@ -203,6 +203,19 @@
           </div>
           <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
           <span id="settings-saved" class="save-indicator"></span>
+
+          <!-- Electron-only: server URL switcher -->
+          <div id="electron-server-section" style="display:none; margin-top:2rem; padding-top:1.5rem; border-top:1px solid #333;">
+            <h3 style="margin:0 0 1rem; font-size:1rem; color:#aaa; text-transform:uppercase; letter-spacing:.05em;">Desktop App — Server Connection</h3>
+            <div class="form-group">
+              <label>Server URL</label>
+              <div class="path-row">
+                <input type="text" id="setting-server-url" placeholder="http://10.0.7.62:3000">
+                <button type="button" class="btn btn-primary" onclick="saveServerUrl()">Connect</button>
+              </div>
+              <small>Change to switch between the office server and an Ngrok test URL. The app will reload immediately.</small>
+            </div>
+          </div>
         </div>
       </section>
     </main>

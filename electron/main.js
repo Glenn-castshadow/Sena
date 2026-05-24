@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -8,22 +8,36 @@ app.commandLine.appendSwitch('disable-gpu');
 app.commandLine.appendSwitch('disable-gpu-compositing');
 app.commandLine.appendSwitch('no-sandbox');
 
+// Config file sits next to the exe (packaged) or in the electron/ folder (dev)
+const CONFIG_PATH = app.isPackaged
+  ? path.join(path.dirname(app.getPath('exe')), 'sena-tracker.json')
+  : path.join(__dirname, 'sena-tracker.json');
+
+const DEFAULT_URL = 'http://10.0.7.62:3000';
+
+function readConfig() {
+  try { return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch {}
+  return {};
+}
+
 function getAppUrl() {
-  try {
-    const cfg = JSON.parse(fs.readFileSync(
-      path.join(path.dirname(app.getPath('exe')), 'sena-tracker.json'), 'utf8'
-    ));
-    if (cfg.url) return cfg.url;
-  } catch {}
-  return 'http://10.0.7.62:3000';
+  return readConfig().url || DEFAULT_URL;
+}
+
+function saveUrl(url) {
+  const cfg = readConfig();
+  cfg.url = url;
+  fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
 }
 
 function createWindow() {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
   const win = new BrowserWindow({
-    width: 1400,
-    height: 900,
+    width: Math.round(width * 0.60),
+    height: Math.round(height * 0.60),
     title: 'Sena Job Tracker',
     autoHideMenuBar: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -32,6 +46,7 @@ function createWindow() {
   });
 
   win.loadURL(getAppUrl());
+  win.once('ready-to-show', () => win.show());
 
   // Open target="_blank" links in the default browser, not a new Electron window
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -57,6 +72,14 @@ ipcMain.handle('create-folder', async (_event, { parentPath, folderName, subfold
     fs.mkdirSync(path.join(target, sub), { recursive: true });
   }
   return target;
+});
+
+ipcMain.handle('get-server-url', () => getAppUrl());
+
+ipcMain.handle('set-server-url', (_event, url) => {
+  saveUrl(url);
+  const win = BrowserWindow.getFocusedWindow();
+  if (win) win.loadURL(url);
 });
 
 app.whenReady().then(createWindow);

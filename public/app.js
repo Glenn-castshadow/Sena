@@ -1078,6 +1078,17 @@ async function loadSettings() {
   document.getElementById('setting-jobs-root').value = settings.jobs_root || '';
   document.getElementById('setting-template-folder').value = settings.template_folder || '';
   document.getElementById('setting-next-serial').value = settings.next_job_serial || '1';
+  if (window.electronAPI) {
+    document.getElementById('electron-server-section').style.display = '';
+    const url = await window.electronAPI.getServerUrl();
+    document.getElementById('setting-server-url').value = url || '';
+  }
+}
+
+async function saveServerUrl() {
+  const url = document.getElementById('setting-server-url').value.trim();
+  if (!url) return;
+  await window.electronAPI.setServerUrl(url);
 }
 
 async function pickFolder() {
