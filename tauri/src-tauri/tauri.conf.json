@@ -24,13 +24,11 @@
     "macOS": {
       "minimumSystemVersion": "10.15"
     },
-    "nsis": {
-      "displayLanguageSelector": false,
-      "installMode": "perMachine",
-      "shortcutsDefaultInstallLocation": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "allowToChangeInstallationDirectory": true
+    "windows": {
+      "nsis": {
+        "displayLanguageSelector": false,
+        "installMode": "perMachine"
+      }
     }
   }
 }
