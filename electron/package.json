@@ -5,26 +5,10 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win --x64"
+    "build": "electron-packager . \"Sena Job Tracker\" --platform=win32 --arch=x64 --out=dist --overwrite --ignore=dist --ignore=node_modules"
   },
   "devDependencies": {
     "electron": "^35.0.0",
-    "electron-builder": "^26.0.0"
-  },
-  "build": {
-    "appId": "com.senaadvertising.jobtracker",
-    "productName": "Sena Job Tracker",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "main.js",
-      "preload.js"
-    ],
-    "win": {
-      "target": [
-        { "target": "portable", "arch": ["x64"] }
-      ]
-    }
+    "@electron/packager": "^18.3.6"
   }
 }

@@ -15,13 +15,15 @@ call npm install
 if errorlevel 1 goto error
 
 echo.
-echo Building Sena Job Tracker.exe...
+echo Building Sena Job Tracker...
 call npm run build
 if errorlevel 1 goto error
 
 echo.
 echo ============================================================
-echo  Done!  dist\Sena Job Tracker.exe is ready to distribute.
+echo  Done!  dist\Sena Job Tracker-win32-x64\ is ready.
+echo  Zip that folder and distribute to LAN users.
+echo  Users extract anywhere and run Sena Job Tracker.exe
 echo ============================================================
 echo.
 pause
