@@ -2582,6 +2582,7 @@ dependencies = [
 name = "sena-job-tracker"
 version = "1.0.0"
 dependencies = [
+ "dirs",
  "serde",
  "serde_json",
  "tauri",

@@ -6,6 +6,7 @@
   "remote": {
     "urls": [
       "http://10.0.7.62:3000/**",
+      "http://10.0.7.62/**",
       "http://localhost:3000/**",
       "https://deluxe-clasp-rosy.ngrok-free.dev/**"
     ]

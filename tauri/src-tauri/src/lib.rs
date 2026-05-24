@@ -57,9 +57,7 @@ fn build_shim(current_url: &str, ngrok_url: &str) -> String {
         ?? null;
   }}
 
-  var hasTauri = !!inv();
-
-  window.electronAPI = {{
+  var api = {{
     getServerInfo: function () {{
       return Promise.resolve({{ defaultUrl: {default_js}, currentUrl: {current_js}, ngrokUrl: {ngrok_js} }});
     }},
@@ -69,9 +67,27 @@ fn build_shim(current_url: &str, ngrok_url: &str) -> String {
       window.location.replace(url);
       return Promise.resolve();
     }},
-    pickFolder:   hasTauri ? function (label, defaultPath) {{ return inv()('pick_folder',   {{ label: label, defaultPath: defaultPath }}); }} : undefined,
-    createFolder: hasTauri ? function (parentPath, folderName, subfolders) {{ return inv()('create_folder', {{ parentPath: parentPath, folderName: folderName, subfolders: subfolders }}); }} : undefined,
   }};
+
+  // Expose pickFolder / createFolder as getters so inv() is checked at
+  // call time rather than init time — avoids a race where __TAURI_INTERNALS__
+  // isn't injected yet when this script first runs.
+  Object.defineProperty(api, 'pickFolder', {{
+    get: function () {{
+      return inv() ? function (label, defaultPath) {{
+        return inv()('pick_folder', {{ label: label, defaultPath: defaultPath }});
+      }} : undefined;
+    }}
+  }});
+  Object.defineProperty(api, 'createFolder', {{
+    get: function () {{
+      return inv() ? function (parentPath, folderName, subfolders) {{
+        return inv()('create_folder', {{ parentPath: parentPath, folderName: folderName, subfolders: subfolders }});
+      }} : undefined;
+    }}
+  }});
+
+  window.electronAPI = api;
 }})();
 "#)
 }
