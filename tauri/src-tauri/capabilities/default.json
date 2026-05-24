@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schema.tauri.app/config/2/capability.json",
+  "identifier": "default",
+  "description": "Default capabilities for Sena Job Tracker",
+  "windows": ["main"],
+  "remote": {
+    "urls": [
+      "http://10.0.7.62:3000/**",
+      "http://10.0.7.62/**",
+      "http://localhost:3000/**",
+      "http://localhost/**",
+      "https://deluxe-clasp-rosy.ngrok-free.dev/**"
+    ]
+  },
+  "permissions": [
+    "core:default",
+    "dialog:allow-open"
+  ]
+}

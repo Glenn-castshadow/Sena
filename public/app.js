@@ -1348,7 +1348,7 @@ async function logout() {
 
 // ── Folder helper abstraction (Electron native API or localhost:3700) ──────
 async function pingHelper() {
-  if (window.electronAPI) { helperAvailable = true; return true; }
+  if (window.electronAPI?.pickFolder) { helperAvailable = true; return true; }
   try {
     const res = await fetch('http://localhost:3700/ping', { signal: AbortSignal.timeout(1500) });
     helperAvailable = res.ok;
@@ -1357,7 +1357,7 @@ async function pingHelper() {
 }
 
 async function helperPickFolder(label, defaultPath) {
-  if (window.electronAPI) return window.electronAPI.pickFolder(label, defaultPath || '');
+  if (window.electronAPI?.pickFolder) return window.electronAPI.pickFolder(label, defaultPath || '');
   const res = await fetch(
     `http://localhost:3700/pick-folder?label=${encodeURIComponent(label)}&default=${encodeURIComponent(defaultPath || '')}`,
     { signal: AbortSignal.timeout(65000) }
@@ -1366,7 +1366,7 @@ async function helperPickFolder(label, defaultPath) {
 }
 
 async function helperCreateFolder(parentPath, folderName, subfolders) {
-  if (window.electronAPI) return window.electronAPI.createFolder(parentPath, folderName, subfolders);
+  if (window.electronAPI?.createFolder) return window.electronAPI.createFolder(parentPath, folderName, subfolders);
   const res = await fetch('http://localhost:3700/create-folder', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Sena Job Tracker",
+  "version": "1.0.0",
+  "identifier": "com.senaadvertising.jobtracker",
+  "build": {
+    "frontendDist": "../frontend"
+  },
+  "app": {
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "nsis",
+    "icon": ["icons/icon.ico"]
+  }
+}

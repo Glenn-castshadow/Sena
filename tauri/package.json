@@ -1,0 +1,12 @@
+{
+  "name": "sena-job-tracker-tauri",
+  "version": "1.0.0",
+  "description": "Tauri desktop client for Sena Job Tracker",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
