@@ -1,6 +1,10 @@
 const BASE = window.BASE_PATH || '';
 const API  = BASE;
 
+// True when running on the LAN server (IP or localhost), false on Ngrok/remote
+const onLocalServer = window.location.hostname === 'localhost'
+  || /^\d+\.\d+\.\d+\.\d+$/.test(window.location.hostname);
+
 // ── State ──────────────────────────────────────────────────────────────────
 let clients = [];
 let settings = {};
@@ -44,6 +48,9 @@ function applyRoleUI() {
   });
   document.querySelectorAll('.admin-only').forEach(el => {
     el.style.display = currentUser?.role === 'admin' ? '' : 'none';
+  });
+  document.querySelectorAll('.local-only').forEach(el => {
+    el.style.display = onLocalServer ? '' : 'none';
   });
   const usersLi = document.getElementById('nav-users-li');
   if (usersLi) usersLi.style.display = currentUser?.role === 'admin' ? '' : 'none';
@@ -588,10 +595,10 @@ async function loadJobs() {
       folderCell = `
         <div class="folder-status">
           <span class="folder-name folder-ok" title="Location: ${pathTip}">✓ ${folderName}</span>
-          ${editable ? `<button class="btn btn-sm btn-ghost folder-btn" id="folder-btn-${j.id}" onclick="pickAndCreateFolder(${j.id})" title="Recreate — pick location and rebuild folder">↺</button>` : ''}
+          ${editable && onLocalServer ? `<button class="btn btn-sm btn-ghost folder-btn" id="folder-btn-${j.id}" onclick="pickAndCreateFolder(${j.id})" title="Recreate — pick location and rebuild folder">↺</button>` : ''}
         </div>`;
     } else {
-      folderCell = editable
+      folderCell = (editable && onLocalServer)
         ? `<div class="folder-pending">
              <span class="folder-name-preview" title="Will be created as: ${folderName}">${folderName}</span>
              <button class="btn btn-sm btn-folder-create" id="folder-btn-${j.id}" onclick="pickAndCreateFolder(${j.id})">📁 Save</button>

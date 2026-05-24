@@ -180,7 +180,7 @@
             <label>Jobs Root Folder Path</label>
             <div class="path-row">
               <input type="text" id="setting-jobs-root" placeholder="e.g. Z:\Jobs or \\server\Production">
-              <button type="button" class="btn btn-secondary" onclick="pickFolder()" id="btn-pick-folder">Browse…</button>
+              <button type="button" class="btn btn-secondary local-only" onclick="pickFolder()" id="btn-pick-folder">Browse…</button>
             </div>
             <small id="pick-folder-note">
               <strong>On this machine:</strong> Browse opens a folder picker.
@@ -191,7 +191,7 @@
             <label>Job Template Folder</label>
             <div class="path-row">
               <input type="text" id="setting-template-folder" placeholder="e.g. C:\Users\you\Desktop\template_folder">
-              <button type="button" class="btn btn-secondary" onclick="pickTemplateFolder()" id="btn-pick-template">Browse…</button>
+              <button type="button" class="btn btn-secondary local-only" onclick="pickTemplateFolder()" id="btn-pick-template">Browse…</button>
             </div>
             <small>Folder whose subfolder structure is copied into every new job. Leave blank to use the default structure.</small>
           </div>
