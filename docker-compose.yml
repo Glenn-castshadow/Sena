@@ -1,6 +1,6 @@
 services:
   job-tracker:
-    build: .
+    image: ghcr.io/glenn-castshadow/sena-job-tracker:latest
     container_name: sena-job-tracker
     restart: unless-stopped
     ports:
