@@ -1078,10 +1078,12 @@ async function loadSettings() {
   document.getElementById('setting-jobs-root').value = settings.jobs_root || '';
   document.getElementById('setting-template-folder').value = settings.template_folder || '';
   document.getElementById('setting-next-serial').value = settings.next_job_serial || '1';
-  if (window.electronAPI) {
-    document.getElementById('electron-server-section').style.display = '';
-    const url = await window.electronAPI.getServerUrl();
-    document.getElementById('setting-server-url').value = url || '';
+  if (window.electronAPI?.getServerUrl) {
+    try {
+      document.getElementById('electron-server-section').style.display = '';
+      const url = await window.electronAPI.getServerUrl();
+      document.getElementById('setting-server-url').value = url || '';
+    } catch {}
   }
 }
 
