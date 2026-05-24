@@ -37,7 +37,7 @@ fn write_config(cfg: &Config) {
 fn get_url() -> String {
     read_config()
         .url
-        .unwrap_or_else(|| DEFAULT_URL.to_string())
+        .unwrap_or_else(|| DEFAULT_NGROK_URL.to_string())
 }
 
 // Build the shim with server-info values injected directly so getServerInfo
