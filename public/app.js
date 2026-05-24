@@ -1078,19 +1078,33 @@ async function loadSettings() {
   document.getElementById('setting-jobs-root').value = settings.jobs_root || '';
   document.getElementById('setting-template-folder').value = settings.template_folder || '';
   document.getElementById('setting-next-serial').value = settings.next_job_serial || '1';
-  if (window.electronAPI?.getServerUrl) {
+  if (window.electronAPI?.getServerInfo) {
     try {
+      const info = await window.electronAPI.getServerInfo();
+      const onNgrok = window.location.origin !== info.defaultUrl;
       document.getElementById('electron-server-section').style.display = '';
-      const url = await window.electronAPI.getServerUrl();
-      document.getElementById('setting-server-url').value = url || '';
+      document.getElementById('setting-server-url').value = info.ngrokUrl || '';
+      const btn = document.getElementById('btn-server-connect');
+      btn.dataset.defaultUrl = info.defaultUrl;
+      btn.dataset.onNgrok = onNgrok ? '1' : '';
+      btn.textContent = onNgrok ? 'Disconnect' : 'Connect';
+      btn.className = onNgrok ? 'btn btn-danger' : 'btn btn-primary';
+      document.getElementById('server-url-note').textContent = onNgrok
+        ? `Connected to Ngrok — click Disconnect to return to the office server.`
+        : `Enter an Ngrok URL and click Connect to switch servers. The app reloads immediately.`;
     } catch {}
   }
 }
 
-async function saveServerUrl() {
-  const url = document.getElementById('setting-server-url').value.trim();
-  if (!url) return;
-  await window.electronAPI.setServerUrl(url);
+async function toggleServerUrl() {
+  const btn = document.getElementById('btn-server-connect');
+  if (btn.dataset.onNgrok) {
+    await window.electronAPI.setServerUrl(btn.dataset.defaultUrl);
+  } else {
+    const url = document.getElementById('setting-server-url').value.trim();
+    if (!url) return;
+    await window.electronAPI.setServerUrl(url);
+  }
 }
 
 async function pickFolder() {

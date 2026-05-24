@@ -27,6 +27,7 @@ function getAppUrl() {
 function saveUrl(url) {
   const cfg = readConfig();
   cfg.url = url;
+  if (url !== DEFAULT_URL) cfg.ngrokUrl = url; // remember last Ngrok URL
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), 'utf8');
 }
 
@@ -74,7 +75,11 @@ ipcMain.handle('create-folder', async (_event, { parentPath, folderName, subfold
   return target;
 });
 
-ipcMain.handle('get-server-url', () => getAppUrl());
+ipcMain.handle('get-server-info', () => ({
+  defaultUrl: DEFAULT_URL,
+  currentUrl: getAppUrl(),
+  ngrokUrl:   readConfig().ngrokUrl || '',
+}));
 
 ipcMain.handle('set-server-url', (_event, url) => {
   saveUrl(url);
