@@ -1,3 +1,38 @@
+// When loaded inside the Tauri iframe shell, bridge electronAPI calls to the
+// shell via postMessage — the shell has direct Tauri IPC at tauri://localhost.
+(function () {
+  if (window.electronAPI || window.parent === window) return;
+  var pending = {}, seq = 0;
+  window.addEventListener('message', function (e) {
+    if (!e.data || e.data.__sena !== 1 || e.data.id == null) return;
+    var cb = pending[e.data.id];
+    if (!cb) return;
+    delete pending[e.data.id];
+    e.data.error ? cb.reject(new Error(e.data.error)) : cb.resolve(e.data.result);
+  });
+  function call(cmd, args) {
+    return new Promise(function (resolve, reject) {
+      var id = ++seq;
+      pending[id] = { resolve: resolve, reject: reject };
+      window.parent.postMessage({ __sena: 1, id: id, cmd: cmd, args: args }, '*');
+    });
+  }
+  window.electronAPI = {
+    getServerInfo: function () { return call('get_server_info', {}); },
+    setServerUrl: function (url) { return call('set_server_url', { url: url }); },
+    get pickFolder() {
+      return function (label, defaultPath) {
+        return call('pick_folder', { label: label || null, defaultPath: defaultPath || null });
+      };
+    },
+    get createFolder() {
+      return function (parentPath, folderName, subfolders) {
+        return call('create_folder', { parentPath: parentPath, folderName: folderName, subfolders: subfolders });
+      };
+    },
+  };
+})();
+
 const BASE = window.BASE_PATH || '';
 const API  = BASE;
 

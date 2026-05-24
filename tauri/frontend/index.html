@@ -1,2 +1,54 @@
 <!DOCTYPE html>
-<html><body>Loading...</body></html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Sena Job Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #1e1e2e; }
+    #app-frame { width: 100%; height: 100%; border: none; }
+    #loading {
+      position: fixed; inset: 0; display: flex;
+      align-items: center; justify-content: center;
+      color: #999; font: 15px/1 system-ui, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Connecting…</div>
+  <iframe id="app-frame" src="about:blank" style="display:none"></iframe>
+  <script>
+    var frame = document.getElementById('app-frame');
+    var loading = document.getElementById('loading');
+
+    // Direct IPC access is always available at tauri://localhost
+    var invoke = (window.__TAURI_INTERNALS__ || {}).invoke
+      || (window.__TAURI__ && window.__TAURI__.core && window.__TAURI__.core.invoke);
+
+    // Bridge postMessage requests from the iframe to Tauri IPC
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.__sena !== 1) return;
+      var id = e.data.id, cmd = e.data.cmd, args = e.data.args || {};
+      var src = e.source;
+      invoke(cmd, args).then(function (result) {
+        if (cmd === 'set_server_url') {
+          // Navigate the iframe to the new URL; no response needed (page reloads)
+          frame.src = args.url;
+        } else if (src) {
+          src.postMessage({ __sena: 1, id: id, result: result }, '*');
+        }
+      }).catch(function (err) {
+        if (src) src.postMessage({ __sena: 1, id: id, error: String(err) }, '*');
+      });
+    });
+
+    invoke('get_server_info').then(function (info) {
+      frame.src = info.currentUrl;
+      frame.style.display = '';
+      loading.style.display = 'none';
+    }).catch(function (err) {
+      loading.textContent = 'Connection error: ' + String(err);
+    });
+  </script>
+</body>
+</html>
