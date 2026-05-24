@@ -109,7 +109,8 @@ ${built
 
   // Static files (HTML/JS/CSS) are public — all sensitive data is behind /api requireAuth.
   // This is necessary for the Tauri iframe shell, where SameSite=Lax cookies are blocked.
-  app.use(express.static(path.join(__dirname, 'public')));
+  // index:false forces GET / through to the serveHtml catch-all so BUILD_TS cache-busting applies.
+  app.use(express.static(path.join(__dirname, 'public'), { index: false }));
   app.get('/{*splat}', serveHtml('index.html'));
 
   return app;
