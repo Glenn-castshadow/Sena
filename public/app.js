@@ -708,7 +708,8 @@ async function pickAndCreateFolder(id) {
         return;
       }
       const folderPath = await helperCreateFolder(picked, info.job_number, info.subfolders);
-      await api(`/api/jobs/${id}/set-folder-path`, { method: 'POST', body: { folder_path: folderPath } });
+      const saved = await api(`/api/jobs/${id}/set-folder-path`, { method: 'POST', body: { folder_path: folderPath } });
+      if (saved === undefined) return; // api() already redirected (e.g. 401)
       await loadJobs();
     } else {
       alert('Folder Helper not running — download it from /helper and keep it open to create folders.');
@@ -1143,6 +1144,11 @@ async function loadSettings() {
       btn.dataset.onNgrok = onNgrok ? '1' : '';
       btn.textContent = onNgrok ? 'Disconnect' : 'Connect';
       btn.className = onNgrok ? 'btn btn-danger' : 'btn btn-primary';
+      const badge = document.getElementById('server-status-badge');
+      if (badge) {
+        badge.textContent = onNgrok ? '🔴 Ngrok (remote)' : '🟢 Office LAN';
+        badge.style.color = onNgrok ? '#f87171' : '#4ade80';
+      }
       document.getElementById('server-url-note').textContent = onNgrok
         ? `Connected to Ngrok — click Disconnect to return to the office server.`
         : `Enter an Ngrok URL and click Connect to switch servers. The app reloads immediately.`;

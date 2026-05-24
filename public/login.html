@@ -58,6 +58,22 @@
     const BASE = window.BASE_PATH || '';
 
     async function init() {
+      // If we already have a session token, check if it's still valid before showing the form.
+      // This handles the case where the app redirected to login due to a transient 401.
+      const token = localStorage.getItem('sena-session-token');
+      if (token) {
+        try {
+          const meRes = await fetch(BASE + '/auth/me', {
+            headers: { 'Accept': 'application/json', 'x-session-id': token },
+          });
+          if (meRes.ok) {
+            window.location.href = BASE + '/';
+            return;
+          }
+        } catch {}
+        localStorage.removeItem('sena-session-token');
+      }
+
       const res = await fetch(BASE + '/auth/setup-needed');
       const { needed } = await res.json();
       if (needed) {

@@ -208,7 +208,8 @@
           <div id="electron-server-section" style="display:none; margin-top:2rem; padding-top:1.5rem; border-top:1px solid #333;">
             <h3 style="margin:0 0 1rem; font-size:1rem; color:#aaa; text-transform:uppercase; letter-spacing:.05em;">Desktop App — Server Connection</h3>
             <div class="form-group">
-              <label>Ngrok / Test Server URL</label>
+              <label>Status: <span id="server-status-badge" style="font-weight:600;"></span></label>
+              <label style="margin-top:.75rem;">Ngrok / Test Server URL</label>
               <div class="path-row">
                 <input type="text" id="setting-server-url" placeholder="https://deluxe-clasp-rosy.ngrok-free.dev">
                 <button type="button" class="btn btn-primary" id="btn-server-connect" onclick="toggleServerUrl()">Connect</button>
