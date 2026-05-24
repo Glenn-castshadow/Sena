@@ -32,11 +32,10 @@
       var src = e.source;
       invoke(cmd, args).then(function (result) {
         if (cmd === 'set_server_url') {
-          // Navigate the iframe to the new URL; no response needed (page reloads)
           frame.src = args.url;
-        } else if (src) {
-          src.postMessage({ __sena: 1, id: id, result: result }, '*');
         }
+        // Always respond so the caller's promise resolves (not just for non-navigate commands)
+        if (src) src.postMessage({ __sena: 1, id: id, result: result }, '*');
       }).catch(function (err) {
         if (src) src.postMessage({ __sena: 1, id: id, error: String(err) }, '*');
       });

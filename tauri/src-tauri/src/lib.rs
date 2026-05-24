@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
-use tauri::{command, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{command, WebviewUrl, WebviewWindowBuilder};
 use url::Url;
 
 const LAN_URL: &str = "http://10.0.7.62:3000";
@@ -52,67 +52,6 @@ fn is_allowed_server_url(raw: &str) -> bool {
     }
 }
 
-fn get_url() -> String {
-    read_config()
-        .url
-        .filter(|url| is_allowed_server_url(url))
-        .unwrap_or_else(|| DEFAULT_NGROK_URL.to_string())
-}
-
-// Inject the Electron-compatible API directly into the top-level remote page.
-// Keeping the app top-level preserves normal SameSite session-cookie behavior.
-fn build_shim(current_url: &str, ngrok_url: &str) -> String {
-    let default_js = serde_json::to_string(LAN_URL).unwrap_or_default();
-    let current_js = serde_json::to_string(current_url).unwrap_or_default();
-    let ngrok_js = serde_json::to_string(ngrok_url).unwrap_or_default();
-    format!(
-        r#"
-(function () {{
-  if (window.electronAPI) return;
-
-  function inv() {{
-    return window.__TAURI__?.core?.invoke
-        ?? window.__TAURI_INTERNALS__?.invoke
-        ?? null;
-  }}
-
-  function invokeOrReject(cmd, args) {{
-    var fn = inv();
-    return fn ? fn(cmd, args || {{}}) : Promise.reject(new Error('Tauri IPC unavailable'));
-  }}
-
-  var api = {{
-    getServerInfo: function () {{
-      return Promise.resolve({{ defaultUrl: {default_js}, currentUrl: {current_js}, ngrokUrl: {ngrok_js} }});
-    }},
-    setServerUrl: function (url) {{
-      return invokeOrReject('set_server_url', {{ url: url }}).then(function () {{
-        window.location.replace(url);
-      }});
-    }},
-  }};
-
-  Object.defineProperty(api, 'pickFolder', {{
-    get: function () {{
-      return inv() ? function (label, defaultPath) {{
-        return invokeOrReject('pick_folder', {{ label: label, defaultPath: defaultPath }});
-      }} : undefined;
-    }}
-  }});
-  Object.defineProperty(api, 'createFolder', {{
-    get: function () {{
-      return inv() ? function (parentPath, folderName, subfolders) {{
-        return invokeOrReject('create_folder', {{ parentPath: parentPath, folderName: folderName, subfolders: subfolders }});
-      }} : undefined;
-    }}
-  }});
-
-  window.electronAPI = api;
-}})();
-"#
-    )
-}
-
 #[command]
 fn get_server_info() -> serde_json::Value {
     let cfg = read_config();
@@ -129,7 +68,7 @@ fn get_server_info() -> serde_json::Value {
 }
 
 #[command]
-fn set_server_url(app: tauri::AppHandle, url: String) -> Result<(), String> {
+fn set_server_url(url: String) -> Result<(), String> {
     if !is_allowed_server_url(&url) {
         return Err("Server URL is not allowed".to_string());
     }
@@ -139,14 +78,6 @@ fn set_server_url(app: tauri::AppHandle, url: String) -> Result<(), String> {
     }
     cfg.url = Some(url);
     write_config(&cfg);
-
-    if let Some(win) = app.get_webview_window("main") {
-        let target_url = cfg.url.as_deref().unwrap_or(DEFAULT_NGROK_URL);
-        let js_url = serde_json::to_string(target_url).map_err(|e| e.to_string())?;
-        win.eval(&format!("window.location.replace({})", js_url))
-            .map_err(|e| e.to_string())?;
-    }
-
     Ok(())
 }
 
@@ -222,11 +153,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            let cfg = read_config();
-            let current_url = get_url();
-            let ngrok_url = cfg.ngrok_url.as_deref().unwrap_or(DEFAULT_NGROK_URL);
-            let shim = build_shim(&current_url, ngrok_url);
-
             let (win_w, win_h) = app
                 .primary_monitor()
                 .ok()
@@ -239,14 +165,9 @@ pub fn run() {
                 })
                 .unwrap_or((1200.0, 800.0));
 
-            WebviewWindowBuilder::new(
-                app,
-                "main",
-                WebviewUrl::External(current_url.parse()?),
-            )
+            WebviewWindowBuilder::new(app, "main", WebviewUrl::App("/index.html".into()))
                 .title("Sena Job Tracker")
                 .inner_size(win_w, win_h)
-                .initialization_script(&shim)
                 .build()?;
             Ok(())
         })
