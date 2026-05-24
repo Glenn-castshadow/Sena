@@ -648,22 +648,13 @@ async function pickAndCreateFolder(id) {
   try {
     if (await pingHelper()) {
       const info = await api(`/api/jobs/${id}/folder-info`);
-      const label = encodeURIComponent(`Select parent folder for: ${info.job_number}`);
-      const def   = encodeURIComponent(info.default_path || '');
-      const picked = await fetch(`http://localhost:3700/pick-folder?label=${label}&default=${def}`,
-        { signal: AbortSignal.timeout(65000) }).then(r => r.json());
-      if (!picked?.path) {
+      const picked = await helperPickFolder(`Select parent folder for: ${info.job_number}`, info.default_path);
+      if (!picked) {
         if (btn) { btn.textContent = '📁 Create Folder'; btn.disabled = false; }
         return;
       }
-      const created = await fetch('http://localhost:3700/create-folder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ parentPath: picked.path, folderName: info.job_number, subfolders: info.subfolders }),
-        signal: AbortSignal.timeout(10000),
-      }).then(r => r.json());
-      if (!created?.ok) throw new Error(created?.error || 'Folder creation failed');
-      await api(`/api/jobs/${id}/set-folder-path`, { method: 'POST', body: { folder_path: created.path } });
+      const folderPath = await helperCreateFolder(picked, info.job_number, info.subfolders);
+      await api(`/api/jobs/${id}/set-folder-path`, { method: 'POST', body: { folder_path: folderPath } });
       await loadJobs();
     } else {
       alert('Folder Helper not running — download it from /helper and keep it open to create folders.');
@@ -1099,10 +1090,7 @@ async function pickFolder() {
       note.innerHTML = `<strong>Folder Helper not running</strong> — <a href="/helper" target="_blank">download it</a> and keep it open, or type the path manually.`;
       return;
     }
-    const current = encodeURIComponent(document.getElementById('setting-jobs-root').value.trim());
-    const res = await fetch(`http://localhost:3700/pick-folder?label=${encodeURIComponent('Select Jobs Root Folder')}&default=${current}`,
-      { signal: AbortSignal.timeout(65000) }).then(r => r.json());
-    const selectedPath = res?.path || null;
+    const selectedPath = await helperPickFolder('Select Jobs Root Folder', document.getElementById('setting-jobs-root').value.trim());
     if (selectedPath) {
       document.getElementById('setting-jobs-root').value = selectedPath;
       note.innerHTML = `<strong>Selected:</strong> ${escHtml(selectedPath)} — click Save Settings to apply.`;
@@ -1141,10 +1129,7 @@ async function pickTemplateFolder() {
       alert('Folder Helper not running — download it from /helper and keep it open, or type the path manually.');
       return;
     }
-    const current = encodeURIComponent(document.getElementById('setting-template-folder').value.trim());
-    const res = await fetch(`http://localhost:3700/pick-folder?label=${encodeURIComponent('Select Job Template Folder')}&default=${current}`,
-      { signal: AbortSignal.timeout(65000) }).then(r => r.json());
-    const selectedPath = res?.path || null;
+    const selectedPath = await helperPickFolder('Select Job Template Folder', document.getElementById('setting-template-folder').value.trim());
     if (selectedPath) document.getElementById('setting-template-folder').value = selectedPath;
   } finally {
     btn.textContent = 'Browse…';
@@ -1327,14 +1312,38 @@ async function logout() {
   window.location.href = BASE + '/login';
 }
 
-// ── Init ───────────────────────────────────────────────────────────────────
+// ── Folder helper abstraction (Electron native API or localhost:3700) ──────
 async function pingHelper() {
+  if (window.electronAPI) { helperAvailable = true; return true; }
   try {
     const res = await fetch('http://localhost:3700/ping', { signal: AbortSignal.timeout(1500) });
     helperAvailable = res.ok;
   } catch { helperAvailable = false; }
   return helperAvailable;
 }
+
+async function helperPickFolder(label, defaultPath) {
+  if (window.electronAPI) return window.electronAPI.pickFolder(label, defaultPath || '');
+  const res = await fetch(
+    `http://localhost:3700/pick-folder?label=${encodeURIComponent(label)}&default=${encodeURIComponent(defaultPath || '')}`,
+    { signal: AbortSignal.timeout(65000) }
+  ).then(r => r.json());
+  return res?.path || null;
+}
+
+async function helperCreateFolder(parentPath, folderName, subfolders) {
+  if (window.electronAPI) return window.electronAPI.createFolder(parentPath, folderName, subfolders);
+  const res = await fetch('http://localhost:3700/create-folder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ parentPath, folderName, subfolders }),
+    signal: AbortSignal.timeout(10000),
+  }).then(r => r.json());
+  if (!res?.ok) throw new Error(res?.error || 'Folder creation failed');
+  return res.path;
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
 
 async function init() {
   try {

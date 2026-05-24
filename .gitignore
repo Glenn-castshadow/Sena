@@ -1,5 +1,7 @@
 node_modules/
 folder-helper/dist/
+electron/dist/
+electron/node_modules/
 .env
 .env.docker
 jobs.db

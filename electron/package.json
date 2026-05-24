@@ -1,0 +1,30 @@
+{
+  "name": "sena-job-tracker",
+  "version": "1.0.0",
+  "description": "Sena Advertising Job Tracker desktop client",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.senaadvertising.jobtracker",
+    "productName": "Sena Job Tracker",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js"
+    ],
+    "win": {
+      "target": [
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    }
+  }
+}
